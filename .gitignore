@@ -8,6 +8,7 @@ users.json
 challenges/auth/authbypass-basic/
 challenges/auth/authbypass-advanced/
 challenges/capstone/secret-tunnel/
+challenges/capstone/fsi-chat/
 # 내부 작업지시서(플랫폼과 무관)
 클로드코드_프롬프트_도커검증.md
 # 솔루션 런타임 산출물
