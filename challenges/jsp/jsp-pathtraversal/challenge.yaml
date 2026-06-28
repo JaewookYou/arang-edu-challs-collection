@@ -1,0 +1,10 @@
+id: jsp-pathtraversal
+title: "JSP - Path Traversal"
+category: jsp
+language: jsp
+difficulty: 2
+port: 9603
+needs_bot: false
+flag_env: FLAG_JSP_PATH
+bug_class: "Path Traversal (File Download)"
+objective: "다운로드 경로 검증 부재를 이용해 WEB-INF/flag.txt 를 읽는다."

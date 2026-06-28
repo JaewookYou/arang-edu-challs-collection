@@ -1,0 +1,14 @@
+id: xss-1
+title: "XSS #1 — 기본"
+category: client
+language: python-flask
+difficulty: 1
+port: 9101
+needs_bot: true
+flag_env: FLAG_XSS_1
+bug_class: "Cross-Site Scripting (Stored)"
+objective: "게시글 본문이 escape 없이 출력되는 점을 이용해 admin 봇의 flag 쿠키를 탈취한다."
+hints:
+  - "게시글 본문은 필터 없이 그대로 렌더링된다 (_base/flask_board view.html 의 |safe)."
+  - "admin 으로 로그인하면 flag 가 쿠키(HttpOnly 아님)에 담긴다."
+  - "신고(report) 기능으로 admin 봇이 내부 URL을 방문한다. document.cookie 를 외부 수집기로 전송하라."

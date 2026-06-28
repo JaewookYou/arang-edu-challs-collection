@@ -1,0 +1,10 @@
+id: prototype-pollution
+title: "Prototype Pollution"
+category: server
+language: php
+difficulty: 3
+port: 9503
+needs_bot: true
+flag_env: FLAG_PROTO
+bug_class: "Prototype Pollution"
+objective: "재귀 merge 의 __proto__ 오염으로 isAdmin/code 를 주입해 eval 을 발동, flag 를 유출한다."

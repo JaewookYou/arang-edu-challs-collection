@@ -1,0 +1,20 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<style>
+ body{margin:0;font-family:"Malgun Gothic",sans-serif;color:#0E2A47;background:#fff}
+ header{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid #E4E9EF}
+ header .b{font-weight:700} header a{color:#44566A;text-decoration:none;margin-left:16px;font-size:14px}
+ .wrap{max-width:760px;margin:0 auto;padding:24px}
+ input,textarea{width:100%;padding:10px 12px;margin:6px 0;border:1px solid #E4E9EF;border-radius:8px;font-size:14px;font-family:inherit}
+ .btn{background:#0E2A47;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:14px;cursor:pointer;text-decoration:none;display:inline-block}
+ .auth{max-width:340px;margin:9vh auto;padding:28px;border:1px solid #E4E9EF;border-radius:14px}
+ .msg{color:#D92D20;font-size:13px;min-height:16px}
+ table{width:100%;border-collapse:collapse} td,th{padding:10px;border-bottom:1px solid #E4E9EF;text-align:left;font-size:14px}
+ .row{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+</style></head><body>
+<header><span class="b">{{ title }}</span><nav>
+{% if uid %}<a href="/board">목록</a><a href="/write">글쓰기</a>{% if needs_bot %}<a href="/report">신고</a>{% endif %}<a href="/logout">{{ uid }} · 로그아웃</a>
+{% else %}<a href="/login">로그인</a>{% endif %}</nav></header>
+<div class="wrap">{% block body %}{% endblock %}</div>
+</body></html>

@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block title %}문제{% endblock %}
+{% block body %}
+<div style="display:flex;align-items:baseline;justify-content:space-between">
+  <h1 style="font-size:24px;margin:0">실습 문제</h1>
+  <div style="color:var(--mute);font-size:14px">해결 <b style="color:var(--ink)">{{ solved_n }}</b> / 배포 {{ total }}</div>
+</div>
+
+<form class="submit" method="post" action="/submit" style="margin-top:16px">
+  <input name="flag" placeholder="flag{...} 제출">
+  <button class="btn red" type="submit">제출</button>
+</form>
+<div id="ok" style="display:none"></div><div id="no" style="display:none"></div>
+<p id="result" style="font-size:13px;min-height:16px;margin:2px 0 0"></p>
+
+{% for key, label in categories.items() %}
+  {% if grouped.get(key) %}
+  <div class="cat">{{ label }}</div>
+  <div class="grid">
+    {% for c in grouped[key] %}
+      <div class="chal {{ 'solved' if c.solved else '' }} {{ 'planned' if c.status!='ready' else '' }}">
+        <div>
+          <div class="t">
+            <span class="dot" style="background:{{ '#1E8E5A' if c.solved else ('#2563EB' if c.status=='ready' else '#C2CCD6') }}"></span>
+            {% if c.status=='ready' %}<a href="{{ c.url }}" target="_blank">{{ c.title }}</a>{% else %}{{ c.title }}{% endif %}
+          </div>
+          <div class="d">난이도 {{ '★' * c.difficulty }}{% if c.needs_bot %} · 봇{% endif %} · :{{ c.port }}</div>
+        </div>
+        {% if c.solved %}<span class="pill ok">해결</span>
+        {% elif c.status=='ready' %}<span class="pill go">도전</span>
+        {% else %}<span class="pill soon">준비중</span>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endfor %}
+
+<script>
+  // 제출 결과 앵커(#ok/#no) 알림
+  var h = location.hash;
+  var r = document.getElementById('result');
+  if (h === '#ok'){ r.style.color='#1E8E5A'; r.textContent='정답입니다! 진행도가 저장되었습니다.'; }
+  else if (h === '#no'){ r.style.color='#D92D20'; r.textContent='틀렸습니다. 다시 시도하세요.'; }
+  if (h){ history.replaceState(null,'',location.pathname); }
+</script>
+{% endblock %}

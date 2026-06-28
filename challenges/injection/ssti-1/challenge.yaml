@@ -1,0 +1,10 @@
+id: ssti-1
+title: "SSTI -> RCE"
+category: injection
+language: python-flask
+difficulty: 2
+port: 9207
+needs_bot: false
+flag_env: FLAG_SSTI_1
+bug_class: "Server-Side Template Injection"
+objective: "Jinja2 템플릿에 입력이 결합되는 점을 이용해 RCE로 /flag.txt 를 읽는다."

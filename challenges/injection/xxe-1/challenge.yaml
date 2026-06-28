@@ -1,0 +1,10 @@
+id: xxe-1
+title: "XXE"
+category: injection
+language: python-flask
+difficulty: 2
+port: 9208
+needs_bot: false
+flag_env: FLAG_XXE_1
+bug_class: "XML External Entity"
+objective: "외부 엔티티 확장을 이용해 서버의 /flag.txt 를 읽어 응답으로 반영시킨다."

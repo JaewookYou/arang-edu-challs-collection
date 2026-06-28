@@ -1,0 +1,10 @@
+id: lfi-2
+title: "LFI #2 - 세션 RCE"
+category: injection
+language: php
+difficulty: 3
+port: 9205
+needs_bot: false
+flag_env: FLAG_LFI_2
+bug_class: "LFI to RCE"
+objective: "LFI 와 PHP 세션 파일을 결합해 코드 실행, /flag2.txt 를 읽는다."

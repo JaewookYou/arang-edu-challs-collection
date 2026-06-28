@@ -1,0 +1,10 @@
+id: csrf-1
+title: "CSRF #1 - admin 비밀번호 변경"
+category: client
+language: python-flask
+difficulty: 2
+port: 9104
+needs_bot: true
+flag_env: FLAG_CSRF_1
+bug_class: "Cross-Site Request Forgery"
+objective: "CSRF로 admin 비밀번호를 공격자가 아는 값으로 바꿔 계정을 탈취한다."

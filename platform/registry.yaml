@@ -1,0 +1,55 @@
+# ─────────────────────────────────────────────────────────────
+# 문제 레지스트리 — 플랫폼(스코어보드)의 단일 진실원천(single source of truth)
+# 플랫폼은 이 파일만 읽어 목록·채점·랭킹을 구성한다. 문제를 직접 호스팅하지 않는다.
+#   status: ready  = 배포됨(링크 활성)
+#           planned = 로드맵 예정(준비중 표기)
+#   url   : 학습자 브라우저용(host). 봇이 방문하는 내부 URL은 봇 설정에서 service 명으로 처리.
+# ─────────────────────────────────────────────────────────────
+categories:
+  client:   "클라이언트 사이드"
+  injection: "인젝션"
+  auth:     "인증 · 인가"
+  logic:    "비즈니스 로직"
+  server:   "서버 사이드"
+  jsp:      "JSP / Java"
+  capstone: "캡스톤"
+
+challenges:
+  # ── client ──
+  - { id: xss-1,  title: "XSS #1 — 기본 반사형",          category: client,    difficulty: 1, port: 9101, url: "http://localhost:9101/", needs_bot: true,  flag_env: FLAG_XSS_1, status: ready }
+  - { id: xss-2,  title: "XSS #2 — 필터 우회",             category: client,    difficulty: 2, port: 9102, url: "http://localhost:9102/", needs_bot: true,  flag_env: FLAG_XSS_2, status: ready }
+  - { id: xss-3,  title: "XSS #3 — 내부망 OOB",            category: client,    difficulty: 3, port: 9103, url: "http://localhost:9103/", needs_bot: true,  flag_env: FLAG_XSS_3, status: ready }
+  - { id: csrf-1, title: "CSRF #1 — 비밀번호 변경",        category: client,    difficulty: 2, port: 9104, url: "http://localhost:9104/", needs_bot: true,  flag_env: FLAG_CSRF_1, status: ready }
+  - { id: csrf-2, title: "CSRF #2 — 토큰 누출 체이닝",     category: client,    difficulty: 3, port: 9105, url: "http://localhost:9105/", needs_bot: true,  flag_env: FLAG_CSRF_2, status: ready }
+  - { id: xsleak, title: "XS-Leak — CSS Injection",        category: client,    difficulty: 3, port: 9106, url: "http://localhost:9106/", needs_bot: true,  flag_env: FLAG_XSLEAK, status: ready }
+  - { id: domclobbering, title: "DOM Clobbering",          category: client,    difficulty: 2, port: 9107, url: "http://localhost:9107/", needs_bot: true,  flag_env: FLAG_DOMCLOB, status: ready }
+  - { id: open-redirect, title: "Open Redirect",           category: client,    difficulty: 1, port: 9108, url: "http://localhost:9108/", needs_bot: false, flag_env: FLAG_OPENRED, status: ready }
+  # ── injection ──
+  - { id: sqli-1, title: "SQLi #1 — 기본",                 category: injection, difficulty: 1, port: 9201, url: "http://localhost:9201/", needs_bot: false, flag_env: FLAG_SQLI_1, status: ready }
+  - { id: sqli-2, title: "SQLi #2 — 필터 우회",            category: injection, difficulty: 2, port: 9202, url: "http://localhost:9202/", needs_bot: false, flag_env: FLAG_SQLI_2, status: ready }
+  - { id: sqli-3, title: "SQLi #3 — Blind",                category: injection, difficulty: 3, port: 9203, url: "http://localhost:9203/", needs_bot: false, flag_env: FLAG_SQLI_3, status: ready }
+  - { id: lfi-1,  title: "LFI #1 — 기본",                  category: injection, difficulty: 2, port: 9204, url: "http://localhost:9204/", needs_bot: false, flag_env: FLAG_LFI_1, status: ready }
+  - { id: lfi-2,  title: "LFI #2 — 세션 RCE",              category: injection, difficulty: 3, port: 9205, url: "http://localhost:9205/", needs_bot: false, flag_env: FLAG_LFI_2, status: ready }
+  - { id: cmdi-1, title: "Command Injection",              category: injection, difficulty: 2, port: 9206, url: "http://localhost:9206/", needs_bot: false, flag_env: FLAG_CMDI_1, status: ready }
+  - { id: ssti-1, title: "SSTI → RCE",                     category: injection, difficulty: 2, port: 9207, url: "http://localhost:9207/", needs_bot: false, flag_env: FLAG_SSTI_1, status: ready }
+  - { id: xxe-1,  title: "XXE",                            category: injection, difficulty: 2, port: 9208, url: "http://localhost:9208/", needs_bot: false, flag_env: FLAG_XXE_1, status: ready }
+  # ── auth ──
+  - { id: idor-balance, title: "IDOR — 계좌 잔액 조회",    category: auth,      difficulty: 1, port: 9301, url: "http://localhost:9301/", needs_bot: false, flag_env: FLAG_IDOR, status: ready }
+  - { id: 2fa-bypass,   title: "2차인증 검증 우회",        category: auth,      difficulty: 2, port: 9302, url: "http://localhost:9302/", needs_bot: false, flag_env: FLAG_2FA, status: ready }
+  - { id: authbypass-basic,    title: "은행 인증우회 — Basic (arang_bank)",    category: auth, difficulty: 2, port: 9001, url: "http://localhost:9001/", needs_bot: false, flag_env: FLAG_AUTHBYPASS_BASIC, status: ready, own_compose: true, source: "github.com/JaewookYou/whs1-ctf2-authbypass-chall :: auth-bypass-basic" }
+  - { id: authbypass-advanced, title: "은행 인증우회 — Advanced (arang_bank2)", category: auth, difficulty: 3, port: 9005, url: "http://localhost:9005/", needs_bot: false, flag_env: FLAG_AUTHBYPASS_ADV,   status: ready, own_compose: true, source: "github.com/JaewookYou/whs1-ctf2-authbypass-chall :: auth-bypass-advanced (호스트포트 9002→9005 재매핑)" }
+  # ── logic ──
+  - { id: race-transfer, title: "Race Condition — 이체",   category: logic,     difficulty: 2, port: 9401, url: "http://localhost:9401/", needs_bot: false, flag_env: FLAG_RACE, status: ready }
+  # ── server ──
+  - { id: upload-webshell, title: "File Upload → 웹쉘",    category: server,    difficulty: 2, port: 9501, url: "http://localhost:9501/", needs_bot: false, flag_env: FLAG_UPLOAD, status: ready }
+  - { id: ssrf-internal,   title: "SSRF — 내부망",         category: server,    difficulty: 3, port: 9502, url: "http://localhost:9502/", needs_bot: false, flag_env: FLAG_SSRF, status: ready }
+  - { id: prototype-pollution, title: "Prototype Pollution", category: server,  difficulty: 3, port: 9503, url: "http://localhost:9503/", needs_bot: true,  flag_env: FLAG_PROTO, status: ready }
+  # ── jsp ──
+  - { id: jsp-sqli,         title: "JSP — SQL Injection",   category: jsp,       difficulty: 2, port: 9601, url: "http://localhost:9601/", needs_bot: false, flag_env: FLAG_JSP_SQLI, status: ready }
+  - { id: jsp-upload,       title: "JSP — File Upload",     category: jsp,       difficulty: 2, port: 9602, url: "http://localhost:9602/", needs_bot: false, flag_env: FLAG_JSP_UPLOAD, status: ready }
+  - { id: jsp-pathtraversal, title: "JSP — Path Traversal", category: jsp,       difficulty: 2, port: 9603, url: "http://localhost:9603/", needs_bot: false, flag_env: FLAG_JSP_PATH, status: ready }
+  # ── capstone ──
+  - { id: jsp-chain, title: "캡스톤 — JSP 체인(WEB-INF→탈취)",     category: capstone, difficulty: 4, port: 9711, url: "http://localhost:9711/", needs_bot: false, flag_env: FLAG_JSP_CHAIN, status: ready }
+  - { id: secret-tunnel, title: "캡스톤 — Secret Tunnel(SSH 터널/피벗→내부 flag)", category: capstone, difficulty: 4, port: 8090, url: "http://localhost:8090/", needs_bot: false, flag_env: FLAG_SECRET_TUNNEL, status: ready, own_compose: true, source: "github.com/JaewookYou/whs2-ctf-chall-secret-tunnel (ext:8090 · SSH:2222)" }
+  - { id: fsi-chat-xss,  title: "캡스톤 — FSI 채팅(XSS→admin 글 탈취)",       category: capstone, difficulty: 4, port: 9090, url: "http://localhost:9090/", needs_bot: true,  flag_env: FLAG_FSI_XSS,  status: ready, own_compose: true, source: "github.com/JaewookYou/2022_fsi_edu_challs (외부 :9090 · XSS→SSRF→MySQL)" }
+  - { id: fsi-chat-sqli, title: "캡스톤 — FSI 채팅(SQLi 파일유출 LOAD_FILE)",  category: capstone, difficulty: 3, port: 9090, url: "http://localhost:9090/", needs_bot: false, flag_env: FLAG_FSI_SQLI, status: ready, own_compose: true, source: "github.com/JaewookYou/2022_fsi_edu_challs (외부 :9090 · /download SQLi)" }

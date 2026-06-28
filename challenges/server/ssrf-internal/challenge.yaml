@@ -1,0 +1,10 @@
+id: ssrf-internal
+title: "SSRF - 내부망"
+category: server
+language: python-flask
+difficulty: 3
+port: 9502
+needs_bot: false
+flag_env: FLAG_SSRF
+bug_class: "Server-Side Request Forgery"
+objective: "서버가 대신 요청하는 기능을 이용해 외부에서 직접 접근 불가한 내부 전용 엔드포인트를 호출한다."

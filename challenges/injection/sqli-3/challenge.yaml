@@ -1,0 +1,10 @@
+id: sqli-3
+title: "SQLi #3 - Blind"
+category: injection
+language: php
+difficulty: 3
+port: 9203
+needs_bot: false
+flag_env: FLAG_SQLI_3
+bug_class: "Blind SQL Injection"
+objective: "결과가 직접 노출되지 않는 상태에서 admin 비밀번호(=flag)를 한 글자씩 추출한다."

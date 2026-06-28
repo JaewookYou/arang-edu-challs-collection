@@ -1,0 +1,10 @@
+id: lfi-1
+title: "LFI #1 - 기본"
+category: injection
+language: php
+difficulty: 2
+port: 9204
+needs_bot: false
+flag_env: FLAG_LFI_1
+bug_class: "Local File Inclusion"
+objective: "php://filter 로 config.php 의 소스를 읽어 주석 속 flag 를 추출한다."

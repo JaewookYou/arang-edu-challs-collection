@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block body %}
+<a href="/board" style="color:#8A99A8;font-size:13px;text-decoration:none">← 목록</a>
+<h2 style="margin:8px 0 4px">{{ a.subject }}</h2>
+<div style="color:#8A99A8;font-size:13px;border-bottom:1px solid #E4E9EF;padding-bottom:12px">작성자 {{ a.author }}</div>
+<div style="padding:18px 0;line-height:1.7">
+  {% if render_safe %}{{ a.content|safe }}{% else %}{{ a.content }}{% endif %}
+  {% if flag_href is defined %}<a href="javascript:alert('{{ flag_href }}')">flag!</a>{% endif %}
+</div>
+{% endblock %}

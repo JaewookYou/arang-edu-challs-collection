@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block title %}랭킹{% endblock %}
+{% block body %}
+<h1 style="font-size:24px;margin:0 0 16px">랭킹</h1>
+<table>
+  <tr><th style="width:60px">#</th><th>참가자</th><th style="width:120px">해결 수</th></tr>
+  {% for r in rows %}
+  <tr>
+    <td>{{ loop.index }}</td>
+    <td style="font-weight:{{ '700' if r.uid==uid else '400' }};color:{{ '#0E2A47' if r.uid==uid else '#44566A' }}">{{ r.uid }}{% if r.uid==uid %} (나){% endif %}</td>
+    <td>{{ r.n }}</td>
+  </tr>
+  {% endfor %}
+  {% if not rows %}<tr><td colspan="3" style="color:var(--mute)">아직 해결한 참가자가 없습니다.</td></tr>{% endif %}
+</table>
+{% endblock %}

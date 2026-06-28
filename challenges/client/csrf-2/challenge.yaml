@@ -1,0 +1,10 @@
+id: csrf-2
+title: "CSRF #2 - 토큰 누출 체이닝"
+category: client
+language: python-flask
+difficulty: 3
+port: 9105
+needs_bot: true
+flag_env: FLAG_CSRF_2
+bug_class: "CSRF + XSS (token leak)"
+objective: "CSRF 토큰 방어를 XSS로 토큰을 누출시켜 우회한다."

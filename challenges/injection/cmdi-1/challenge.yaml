@@ -1,0 +1,10 @@
+id: cmdi-1
+title: "Command Injection"
+category: injection
+language: python-flask
+difficulty: 2
+port: 9206
+needs_bot: false
+flag_env: FLAG_CMDI_1
+bug_class: "OS Command Injection"
+objective: "ping 입력값에 셸 메타문자를 주입해 임의 명령을 실행, /flag.txt 를 읽는다."
