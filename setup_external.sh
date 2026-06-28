@@ -58,6 +58,14 @@ fi
 FSI_SQLI="$(getf FLAG_FSI_SQLI || true)"; FSI_XSS="$(getf FLAG_FSI_XSS || true)"
 [ -n "$FSI_SQLI" ] && [ -f "$FSI/docker/mysql/Dockerfile" ] && { sed -i.bak "s|fsi2022{[^}]*}|$FSI_SQLI|" "$FSI/docker/mysql/Dockerfile"; rm -f "$FSI/docker/mysql/Dockerfile.bak"; }
 [ -n "$FSI_XSS" ]  && [ -f "$FSI/mysql/init.sql" ]            && { sed -i.bak "s|fsi2022{[^}]*}|$FSI_XSS|"  "$FSI/mysql/init.sql"; rm -f "$FSI/mysql/init.sql.bak"; }
+# [보정] compose(업스트림엔 없는 로컬보정): db 컨테이너명 충돌 회피(authbypass-basic 의 mysql-db) + ext/int db-레이스 자동복구(멱등)
+FSI_COMPOSE="$FSI/docker-compose.yml"
+if [ -f "$FSI_COMPOSE" ]; then
+  sed -i.bak 's|container_name: mysql-db|container_name: fsi-mysql-db|' "$FSI_COMPOSE" && rm -f "$FSI_COMPOSE.bak"   # 앱은 IP(172.22.0.5) 접속이라 무영향
+  if ! grep -q 'restart: on-failure' "$FSI_COMPOSE"; then
+    sed -i.bak -e 's|^  external_server:|  external_server:\n    restart: on-failure|' -e 's|^  internal_server:|  internal_server:\n    restart: on-failure|' "$FSI_COMPOSE" && rm -f "$FSI_COMPOSE.bak"
+  fi
+fi
 # [보정] 내부보드 int/app.py 는 db 기동 레이스로 죽으면 재기동 안 됨(entrypoint 가 '&' 백그라운드) → XSS 챌린지용 재시작 루프(멱등)
 if [ -f "$FSI/int/entrypoint.sh" ] && ! grep -q 'while true; do python3 /app/app.py' "$FSI/int/entrypoint.sh"; then
   sed -i.bak 's#^python3 /app/app.py&#while true; do python3 /app/app.py; sleep 2; done \&#' "$FSI/int/entrypoint.sh"; rm -f "$FSI/int/entrypoint.sh.bak"
