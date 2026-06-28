@@ -21,7 +21,7 @@
         <div>
           <div class="t">
             <span class="dot" style="background:{{ '#1E8E5A' if c.solved else ('#2563EB' if c.status=='ready' else '#C2CCD6') }}"></span>
-            {% if c.status=='ready' %}<a href="{{ c.url }}" target="_blank">{{ c.title }}</a>{% else %}{{ c.title }}{% endif %}
+            {% if c.status=='ready' %}<a class="chlink" href="{{ c.url }}" target="_blank">{{ c.title }}</a>{% else %}{{ c.title }}{% endif %}
           </div>
           <div class="d">난이도 {{ '★' * c.difficulty }}{% if c.needs_bot %} · 봇{% endif %} · :{{ c.port }}</div>
         </div>
@@ -41,5 +41,11 @@
   if (h === '#ok'){ r.style.color='#1E8E5A'; r.textContent='정답입니다! 진행도가 저장되었습니다.'; }
   else if (h === '#no'){ r.style.color='#D92D20'; r.textContent='틀렸습니다. 다시 시도하세요.'; }
   if (h){ history.replaceState(null,'',location.pathname); }
+
+  // 챌린지 링크는 '대시보드를 연 호스트'를 따라가도록 호스트명만 교체(registry 의 localhost 하드코딩 대신).
+  // edu.arang.kr·사내 IP·localhost 등 어떤 호스트로 접속하든 그 호스트의 동일 포트로 연결된다.
+  document.querySelectorAll('a.chlink').forEach(function(a){
+    try { var u = new URL(a.href); u.hostname = location.hostname; a.href = u.href; } catch (e) {}
+  });
 </script>
 {% endblock %}
