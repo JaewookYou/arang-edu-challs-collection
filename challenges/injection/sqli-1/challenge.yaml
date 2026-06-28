@@ -1,0 +1,10 @@
+id: sqli-1
+title: "SQLi #1 - 기본"
+category: injection
+language: php
+difficulty: 1
+port: 9201
+needs_bot: false
+flag_env: FLAG_SQLI_1
+bug_class: "SQL Injection"
+objective: "쿼리에 입력이 그대로 들어가는 점을 이용해 admin 으로 로그인, flag 를 얻는다."

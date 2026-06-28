@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block title %}회원가입{% endblock %}
+{% block body %}
+<form class="auth" method="post" action="/register">
+  <h1>회원가입</h1>
+  <p class="sub">실습 진행도 저장용 계정</p>
+  <input name="userid" placeholder="아이디" autocomplete="username">
+  <input name="userpw" type="password" placeholder="비밀번호" autocomplete="new-password">
+  <div class="msg">{{ msg }}</div>
+  <button class="btn" type="submit">가입</button>
+  <p class="sub" style="text-align:center;margin-top:16px"><a href="/login" style="color:#2563EB">로그인으로</a></p>
+</form>
+{% endblock %}

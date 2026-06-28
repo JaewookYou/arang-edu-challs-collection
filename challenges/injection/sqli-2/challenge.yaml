@@ -1,0 +1,10 @@
+id: sqli-2
+title: "SQLi #2 - 필터 우회"
+category: injection
+language: php
+difficulty: 2
+port: 9202
+needs_bot: false
+flag_env: FLAG_SQLI_2
+bug_class: "SQL Injection (WAF bypass)"
+objective: "공백/or/union/admin/숫자 등을 막는 WAF 를 우회해 admin 으로 인증한다."

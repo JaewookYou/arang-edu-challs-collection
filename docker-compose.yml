@@ -1,0 +1,324 @@
+# 자동 생성(gen) — 플랫폼/봇/DB + 문제. 프로필: all/day1/day2/<category>
+name: web-pentest-edu
+
+services:
+  platform:
+    build: { context: ., dockerfile: platform/Dockerfile }
+    container_name: platform
+    ports: ["9000:9000"]
+    env_file: [.env]
+    volumes: ["platform_data:/data"]
+    restart: unless-stopped
+
+  bot:
+    build: { context: ., dockerfile: bot/Dockerfile }
+    container_name: bot
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    restart: unless-stopped
+
+  db:
+    image: mariadb:10.11
+    container_name: db
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpw
+      - FLAG_SQLI_3=${FLAG_SQLI_3}
+    volumes:
+      - ./docker/db/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 40s
+    profiles: ["all", "day1", "day2", "injection", "jsp"]
+    restart: unless-stopped
+
+  2fa-bypass:
+    build: { context: ., dockerfile: challenges/auth/2fa-bypass/Dockerfile }
+    container_name: 2fa-bypass
+    ports: ["9302:9302"]
+    environment:
+      - FLAG_2FA=${FLAG_2FA}
+    profiles: ["all", "day1", "auth"]
+    restart: unless-stopped
+
+  idor-balance:
+    build: { context: ., dockerfile: challenges/auth/idor-balance/Dockerfile }
+    container_name: idor-balance
+    ports: ["9301:9301"]
+    environment:
+      - FLAG_IDOR=${FLAG_IDOR}
+    profiles: ["all", "day1", "auth"]
+    restart: unless-stopped
+
+  jsp-chain:
+    build: { context: ., dockerfile: challenges/capstone/jsp-chain/Dockerfile }
+    container_name: jsp-chain
+    ports: ["9711:9711"]
+    environment:
+      - FLAG_JSP_CHAIN=${FLAG_JSP_CHAIN}
+    profiles: ["all", "day2", "capstone"]
+    restart: unless-stopped
+
+  csrf-1:
+    build: { context: ., dockerfile: challenges/client/csrf-1/Dockerfile }
+    container_name: csrf-1
+    ports: ["9104:9104"]
+    environment:
+      - FLAG_CSRF_1=${FLAG_CSRF_1}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - BOT_URL=http://bot:9099/visit
+    depends_on: [bot]
+    profiles: ["all", "day1", "client"]
+    restart: unless-stopped
+
+  csrf-2:
+    build: { context: ., dockerfile: challenges/client/csrf-2/Dockerfile }
+    container_name: csrf-2
+    ports: ["9105:9105"]
+    environment:
+      - FLAG_CSRF_2=${FLAG_CSRF_2}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - BOT_URL=http://bot:9099/visit
+    depends_on: [bot]
+    profiles: ["all", "day1", "client"]
+    restart: unless-stopped
+
+  domclobbering:
+    build: { context: ., dockerfile: challenges/client/domclobbering/Dockerfile }
+    container_name: domclobbering
+    ports: ["9107:9107"]
+    environment:
+      - FLAG_DOMCLOB=${FLAG_DOMCLOB}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - BOT_URL=http://bot:9099/visit
+    depends_on: [bot]
+    profiles: ["all", "day1", "client"]
+    restart: unless-stopped
+
+  open-redirect:
+    build: { context: ., dockerfile: challenges/client/open-redirect/Dockerfile }
+    container_name: open-redirect
+    ports: ["9108:9108"]
+    environment:
+      - FLAG_OPENRED=${FLAG_OPENRED}
+    profiles: ["all", "day1", "client"]
+    restart: unless-stopped
+
+  xsleak:
+    build: { context: ., dockerfile: challenges/client/xsleak/Dockerfile }
+    container_name: xsleak
+    ports: ["9106:9106"]
+    environment:
+      - FLAG_XSLEAK=${FLAG_XSLEAK}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - BOT_URL=http://bot:9099/visit
+    depends_on: [bot]
+    profiles: ["all", "day1", "client"]
+    restart: unless-stopped
+
+  xss-1:
+    build: { context: ., dockerfile: challenges/client/xss-1/Dockerfile }
+    container_name: xss-1
+    ports: ["9101:9101"]
+    environment:
+      - FLAG_XSS_1=${FLAG_XSS_1}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - BOT_URL=http://bot:9099/visit
+    depends_on: [bot]
+    profiles: ["all", "day1", "client"]
+    restart: unless-stopped
+
+  xss-2:
+    build: { context: ., dockerfile: challenges/client/xss-2/Dockerfile }
+    container_name: xss-2
+    ports: ["9102:9102"]
+    environment:
+      - FLAG_XSS_2=${FLAG_XSS_2}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - BOT_URL=http://bot:9099/visit
+    depends_on: [bot]
+    profiles: ["all", "day1", "client"]
+    restart: unless-stopped
+
+  xss-3:
+    build: { context: ., dockerfile: challenges/client/xss-3/Dockerfile }
+    container_name: xss-3
+    ports: ["9103:9103"]
+    environment:
+      - FLAG_XSS_3=${FLAG_XSS_3}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - BOT_URL=http://bot:9099/visit
+    depends_on: [bot]
+    profiles: ["all", "day1", "client"]
+    restart: unless-stopped
+
+  cmdi-1:
+    build: { context: ., dockerfile: challenges/injection/cmdi-1/Dockerfile }
+    container_name: cmdi-1
+    ports: ["9206:9206"]
+    environment:
+      - FLAG_CMDI_1=${FLAG_CMDI_1}
+    profiles: ["all", "day1", "injection"]
+    restart: unless-stopped
+
+  lfi-1:
+    build: { context: ., dockerfile: challenges/injection/lfi-1/Dockerfile }
+    container_name: lfi-1
+    ports: ["9204:9204"]
+    environment:
+      - FLAG_LFI_1=${FLAG_LFI_1}
+    profiles: ["all", "day1", "injection"]
+    restart: unless-stopped
+
+  lfi-2:
+    build: { context: ., dockerfile: challenges/injection/lfi-2/Dockerfile }
+    container_name: lfi-2
+    ports: ["9205:9205"]
+    environment:
+      - FLAG_LFI_2=${FLAG_LFI_2}
+    profiles: ["all", "day1", "injection"]
+    restart: unless-stopped
+
+  sqli-1:
+    build: { context: ., dockerfile: challenges/injection/sqli-1/Dockerfile }
+    container_name: sqli-1
+    ports: ["9201:9201"]
+    environment:
+      - FLAG_SQLI_1=${FLAG_SQLI_1}
+      - DB_HOST=db
+      - DB_NAME=chall
+      - DB_USER=sqli
+      - DB_PASS=sqlipw
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["all", "day1", "injection"]
+    restart: unless-stopped
+
+  sqli-2:
+    build: { context: ., dockerfile: challenges/injection/sqli-2/Dockerfile }
+    container_name: sqli-2
+    ports: ["9202:9202"]
+    environment:
+      - FLAG_SQLI_2=${FLAG_SQLI_2}
+      - DB_HOST=db
+      - DB_NAME=chall
+      - DB_USER=sqli
+      - DB_PASS=sqlipw
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["all", "day1", "injection"]
+    restart: unless-stopped
+
+  sqli-3:
+    build: { context: ., dockerfile: challenges/injection/sqli-3/Dockerfile }
+    container_name: sqli-3
+    ports: ["9203:9203"]
+    environment:
+      - FLAG_SQLI_3=${FLAG_SQLI_3}
+      - DB_HOST=db
+      - DB_NAME=chall
+      - DB_USER=sqli
+      - DB_PASS=sqlipw
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["all", "day1", "injection"]
+    restart: unless-stopped
+
+  ssti-1:
+    build: { context: ., dockerfile: challenges/injection/ssti-1/Dockerfile }
+    container_name: ssti-1
+    ports: ["9207:9207"]
+    environment:
+      - FLAG_SSTI_1=${FLAG_SSTI_1}
+    profiles: ["all", "day1", "injection"]
+    restart: unless-stopped
+
+  xxe-1:
+    build: { context: ., dockerfile: challenges/injection/xxe-1/Dockerfile }
+    container_name: xxe-1
+    ports: ["9208:9208"]
+    environment:
+      - FLAG_XXE_1=${FLAG_XXE_1}
+    profiles: ["all", "day1", "injection"]
+    restart: unless-stopped
+
+  jsp-pathtraversal:
+    build: { context: ., dockerfile: challenges/jsp/jsp-pathtraversal/Dockerfile }
+    container_name: jsp-pathtraversal
+    ports: ["9603:9603"]
+    environment:
+      - FLAG_JSP_PATH=${FLAG_JSP_PATH}
+    profiles: ["all", "day2", "jsp"]
+    restart: unless-stopped
+
+  jsp-sqli:
+    build: { context: ., dockerfile: challenges/jsp/jsp-sqli/Dockerfile }
+    container_name: jsp-sqli
+    ports: ["9601:9601"]
+    environment:
+      - FLAG_JSP_SQLI=${FLAG_JSP_SQLI}
+      - DB_HOST=db
+      - DB_NAME=chall
+      - DB_USER=sqli
+      - DB_PASS=sqlipw
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["all", "day2", "jsp"]
+    restart: unless-stopped
+
+  jsp-upload:
+    build: { context: ., dockerfile: challenges/jsp/jsp-upload/Dockerfile }
+    container_name: jsp-upload
+    ports: ["9602:9602"]
+    environment:
+      - FLAG_JSP_UPLOAD=${FLAG_JSP_UPLOAD}
+    profiles: ["all", "day2", "jsp"]
+    restart: unless-stopped
+
+  race-transfer:
+    build: { context: ., dockerfile: challenges/logic/race-transfer/Dockerfile }
+    container_name: race-transfer
+    ports: ["9401:9401"]
+    environment:
+      - FLAG_RACE=${FLAG_RACE}
+    profiles: ["all", "day2", "logic"]
+    restart: unless-stopped
+
+  prototype-pollution:
+    build: { context: ., dockerfile: challenges/server/prototype-pollution/Dockerfile }
+    container_name: prototype-pollution
+    ports: ["9503:9503"]
+    environment:
+      - FLAG_PROTO=${FLAG_PROTO}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - BOT_URL=http://bot:9099/visit
+    depends_on: [bot]
+    profiles: ["all", "day2", "server"]
+    restart: unless-stopped
+
+  ssrf-internal:
+    build: { context: ., dockerfile: challenges/server/ssrf-internal/Dockerfile }
+    container_name: ssrf-internal
+    ports: ["9502:9502"]
+    environment:
+      - FLAG_SSRF=${FLAG_SSRF}
+    profiles: ["all", "day2", "server"]
+    restart: unless-stopped
+
+  upload-webshell:
+    build: { context: ., dockerfile: challenges/server/upload-webshell/Dockerfile }
+    container_name: upload-webshell
+    ports: ["9501:9501"]
+    environment:
+      - FLAG_UPLOAD=${FLAG_UPLOAD}
+    profiles: ["all", "day2", "server"]
+    restart: unless-stopped
+
+volumes:
+  platform_data:

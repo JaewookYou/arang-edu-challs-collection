@@ -1,0 +1,10 @@
+id: xss-3
+title: "XSS #3 - flag 게시글 읽기"
+category: client
+language: python-flask
+difficulty: 3
+port: 9103
+needs_bot: true
+flag_env: FLAG_XSS_3
+bug_class: "Cross-Site Scripting (strong filter)"
+objective: "강한 필터를 우회해, admin만 볼 수 있는 0번 글의 flag를 XSS로 읽어 외부로 보낸다."

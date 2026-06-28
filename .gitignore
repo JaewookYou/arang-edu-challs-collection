@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.pyc
+platform_data/
+users.json
+
+# 외부 GitHub 챌린지(setup_external 로 클론) — 자체 .git·실 flag 포함 → 본 레포 미포함
+challenges/auth/authbypass-basic/
+challenges/auth/authbypass-advanced/
+challenges/capstone/secret-tunnel/
+# 내부 작업지시서(플랫폼과 무관)
+클로드코드_프롬프트_도커검증.md
+# 솔루션 런타임 산출물
+solution/exfil.log
+solution/*.log

@@ -1,0 +1,10 @@
+id: jsp-upload
+title: "JSP - File Upload"
+category: jsp
+language: jsp
+difficulty: 2
+port: 9602
+needs_bot: false
+flag_env: FLAG_JSP_UPLOAD
+bug_class: "File Upload (RCE, Java)"
+objective: "확장자 검사 우회로 실행가능한 JSP를 업로드해 RCE, /flag 를 읽는다."

@@ -1,0 +1,10 @@
+id: domclobbering
+title: "DOM Clobbering"
+category: client
+language: php
+difficulty: 2
+port: 9107
+needs_bot: true
+flag_env: FLAG_DOMCLOB
+bug_class: "DOM Clobbering"
+objective: "HTML 주입으로 CLOB.isAdmin 을 참으로 만들어 eval 분기를 활성화, flag 를 외부로 보낸다."

@@ -1,0 +1,10 @@
+id: jsp-chain
+title: "캡스톤 - JSP 체인 (WEB-INF 디컴파일 → 탈취)"
+category: capstone
+language: jsp
+difficulty: 4
+port: 9711
+needs_bot: false
+flag_env: FLAG_JSP_CHAIN
+bug_class: "Path Traversal -> Source Disclosure -> Decompile -> RCE"
+objective: "다운로드 취약점으로 WEB-INF 클래스를 확보·디컴파일하여 숨은 RCE 엔드포인트로 서버를 탈취한다."

@@ -1,0 +1,10 @@
+id: xss-2
+title: "XSS #2 - 필터 우회"
+category: client
+language: python-flask
+difficulty: 2
+port: 9102
+needs_bot: true
+flag_env: FLAG_XSS_2
+bug_class: "Cross-Site Scripting (filter bypass)"
+objective: "불완전한 블랙리스트 필터를 우회해 admin 쿠키를 탈취한다."

@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block body %}
+<div class="row" style="justify-content:space-between">
+  <h2 style="margin:0">게시판</h2>
+  <a class="btn" href="/write">글쓰기</a>
+</div>
+<table>
+  <tr><th style="width:60px">번호</th><th>제목</th><th style="width:120px">작성자</th></tr>
+  {% for a in articles %}
+  <tr><td>{{ a.seq }}</td><td><a href="/board/{{ a.seq }}" style="color:#0E2A47;text-decoration:none">{{ a.subject }}</a></td><td>{{ a.author }}</td></tr>
+  {% endfor %}
+  {% if not articles %}<tr><td colspan="3" style="color:#8A99A8">게시글이 없습니다.</td></tr>{% endif %}
+</table>
+{% endblock %}

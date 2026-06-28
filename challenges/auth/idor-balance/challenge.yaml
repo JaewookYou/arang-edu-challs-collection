@@ -1,0 +1,10 @@
+id: idor-balance
+title: "IDOR - 계좌 잔액 조회"
+category: auth
+language: python-flask
+difficulty: 1
+port: 9301
+needs_bot: false
+flag_env: FLAG_IDOR
+bug_class: "IDOR / BOLA"
+objective: "계좌번호만 바꿔 타인(admin) 계좌를 조회, 메모에 숨은 flag를 획득한다."

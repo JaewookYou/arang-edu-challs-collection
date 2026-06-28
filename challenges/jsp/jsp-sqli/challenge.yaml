@@ -1,0 +1,10 @@
+id: jsp-sqli
+title: "JSP - SQL Injection"
+category: jsp
+language: jsp
+difficulty: 2
+port: 9601
+needs_bot: false
+flag_env: FLAG_JSP_SQLI
+bug_class: "SQL Injection (Java/JDBC)"
+objective: "JDBC 쿼리에 입력이 결합되는 JSP에서 SQLi로 admin 로그인."

@@ -1,0 +1,10 @@
+id: open-redirect
+title: "Open Redirect"
+category: client
+language: python-flask
+difficulty: 1
+port: 9108
+needs_bot: false
+flag_env: FLAG_OPENRED
+bug_class: "Open Redirection"
+objective: "허술한 same-site 검사를 우회해 외부 도메인으로 리다이렉트시킨다."

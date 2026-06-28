@@ -1,0 +1,10 @@
+id: 2fa-bypass
+title: "2차인증 검증 우회"
+category: auth
+language: python-flask
+difficulty: 2
+port: 9302
+needs_bot: false
+flag_env: FLAG_2FA
+bug_class: "Improper Verification (2FA)"
+objective: "OTP 완료 여부를 서버가 제대로 검증하지 않는 점을 이용해 2차인증을 우회한다."

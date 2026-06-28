@@ -1,0 +1,10 @@
+id: race-transfer
+title: "Race Condition - 이체"
+category: logic
+language: python-flask
+difficulty: 2
+port: 9401
+needs_bot: false
+flag_env: FLAG_RACE
+bug_class: "Race Condition (TOCTOU)"
+objective: "잔액 검증과 차감 사이의 경합을 이용해 보유액(100)보다 많은 금액을 vault 로 이체한다."

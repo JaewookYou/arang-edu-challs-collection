@@ -1,0 +1,10 @@
+id: upload-webshell
+title: "File Upload -> 웹쉘"
+category: server
+language: php
+difficulty: 2
+port: 9501
+needs_bot: false
+flag_env: FLAG_UPLOAD
+bug_class: "File Upload (RCE)"
+objective: "확장자 검사 우회로 실행가능한 파일을 업로드해 웹쉘 RCE, /flag_upload.txt 를 읽는다."

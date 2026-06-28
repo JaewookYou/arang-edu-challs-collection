@@ -1,0 +1,10 @@
+id: xsleak
+title: "XS-Leak - CSS Injection"
+category: client
+language: python-flask
+difficulty: 3
+port: 9106
+needs_bot: true
+flag_env: FLAG_XSLEAK
+bug_class: "XS-Leak / CSS Injection"
+objective: "admin 페이지에 CSS를 주입해 secret(flag)을 한 글자씩 외부로 누출한다."
