@@ -25,11 +25,19 @@ challenges/<category>/<id>/   문제 1개 = 1 자기완결 폴더
 #   폴더가 없으면 start.ps1 이 setup_external.ps1 을 자동 실행(clone+플래그주입, git 필요).
 ```
 
-### Linux / macOS
+### Linux / macOS (권장)
 ```bash
-./gen_flags.sh                  # 1) 랜덤 플래그 .env 생성
-make up                         # 2) 전체 기동 (= docker compose --profile all up -d --build)
-make up-client                  # 부분 기동(카테고리) · make up-day1 · make down
+chmod +x start.sh               # 최초 1회
+./start.sh                      # 메인+외부 챌린지 한 번에: Docker확인→플래그→빌드·기동→db대기→스코어보드 열기
+./start.sh --profile client     # 특정 카테고리만 (client/injection/auth/logic/server/jsp/capstone/day1/day2)
+./start.sh --no-external        # 외부 GitHub 챌린지 제외(메인 스택만 기동)
+./start.sh --keep-env           # 기존 .env(플래그) 유지
+./start.sh --down               # 전체 정리(외부 챌린지 포함)
+#   외부 챌린지(authbypass :9001/:9005 · secret-tunnel :8090/SSH2222)는 기본 포함(setup_external.sh 자동 호출).
+```
+수동(Makefile):
+```bash
+./gen_flags.sh && make up       # 전체 기동 · make up-client(카테고리) · make down
 ```
 
 ## 문제 추가 방법
