@@ -30,7 +30,7 @@ param(
   [switch]$NoExternal,  # 외부 챌린지(authbypass·secret-tunnel) 기동 제외
   [switch]$WithFsi      # FSI(2022_fsi_edu_challs) 도 함께 기동(상위 폴더 별도 레포)
 )
-$FsiDir = Join-Path (Split-Path $PSScriptRoot -Parent) '2022_fsi_edu_challs-main\2022_fsi_edu_challs-main'
+$FsiDir = Join-Path $PSScriptRoot 'challenges\capstone\fsi-chat'   # setup_external 이 여기로 clone (레포 내부)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 # 콘솔 한글 출력 인코딩(UTF-8) — PS 5.1 및 출력 리다이렉션에서 깨짐 방지
@@ -84,6 +84,10 @@ if ($KeepEnv -and (Test-Path .\.env)) {
 
 # ── 1.5) FSI (옵션) — 172.22.0.0/24 고정 대역을 선점하도록 메인보다 먼저 기동 ──
 if ($WithFsi) {
+  if (-not (Test-Path (Join-Path $FsiDir 'docker-compose.yml'))) {
+    Info "FSI 폴더 없음 → setup_external.ps1 로 clone+보정(레포 내부 challenges\capstone\fsi-chat)..."
+    try { & .\setup_external.ps1 } catch { Warn "setup_external 실패: $($_.Exception.Message)" }
+  }
   if (Test-Path (Join-Path $FsiDir 'docker-compose.yml')) {
     # secret-tunnel 의 자동 bridge(/16)가 172.22 를 선점하면 FSI 가 못 뜬다.
     # 잠시 내려 172.22 를 비운 뒤 FSI 가 선점하게 하고, secret-tunnel 은 아래 외부 루프에서 다른 대역으로 재기동.

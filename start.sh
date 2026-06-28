@@ -20,7 +20,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
-FSI_DIR="$(dirname "$SCRIPT_DIR")/2022_fsi_edu_challs-main/2022_fsi_edu_challs-main"
+FSI_DIR="$SCRIPT_DIR/challenges/capstone/fsi-chat"   # setup_external 이 여기로 clone (레포 내부)
 
 EXT_DIRS=(
   "challenges/auth/authbypass-basic"
@@ -91,6 +91,10 @@ fi
 
 # ── 1.5) FSI (옵션) — 172.22.0.0/24 고정 대역을 선점하도록 메인보다 먼저 기동 ──
 if [ "$WITHFSI" = 1 ]; then
+  if [ ! -f "$FSI_DIR/docker-compose.yml" ]; then
+    info "FSI 폴더 없음 → setup_external.sh 로 clone+보정(레포 내부 challenges/capstone/fsi-chat)..."
+    bash ./setup_external.sh || warn "setup_external 실패 (git/네트워크 확인)"
+  fi
   if [ -f "$FSI_DIR/docker-compose.yml" ]; then
     # secret-tunnel 의 자동 bridge 가 172.22 를 선점하면 FSI 가 못 뜬다 → 잠시 내렸다가 FSI 선점.
     if [ -f "challenges/capstone/secret-tunnel/docker-compose.yml" ]; then

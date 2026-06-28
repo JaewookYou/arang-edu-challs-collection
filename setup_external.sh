@@ -46,10 +46,28 @@ reinject "$AB_A/docker-compose.yml" "$(getf FLAG_AUTHBYPASS_ADV)"
 # advanced 호스트포트 9002→9005 (멱등: 이미 9005면 매치 안 됨)
 sed -i.bak 's|"9002:9002"|"9005:9002"|' "$AB_A/docker-compose.yml" && rm -f "$AB_A/docker-compose.yml.bak"
 
-# ── (3) CRLF→LF 정규화(컨테이너용 파일) ──
+# ── (3) FSI 채팅(2022_fsi_edu_challs) — 캡스톤 XSS/SQLi (:9090, 자체 compose · 172.22.0.0/24 고정) ──
+FSI="$ROOT/challenges/capstone/fsi-chat"
+if [ ! -d "$FSI" ]; then
+  echo "[*] FSI(2022_fsi_edu_challs) clone..."
+  git clone --depth 1 https://github.com/JaewookYou/2022_fsi_edu_challs "$FSI"
+else
+  echo "[*] FSI 존재 — clone 생략(플래그/보정 재적용)"
+fi
+# FSI 플래그는 fsi2022{...} 고정형식(위 reinject 의 flag{} 와 별개) — .env 기준 재주입(멱등)
+FSI_SQLI="$(getf FLAG_FSI_SQLI || true)"; FSI_XSS="$(getf FLAG_FSI_XSS || true)"
+[ -n "$FSI_SQLI" ] && [ -f "$FSI/docker/mysql/Dockerfile" ] && { sed -i.bak "s|fsi2022{[^}]*}|$FSI_SQLI|" "$FSI/docker/mysql/Dockerfile"; rm -f "$FSI/docker/mysql/Dockerfile.bak"; }
+[ -n "$FSI_XSS" ]  && [ -f "$FSI/mysql/init.sql" ]            && { sed -i.bak "s|fsi2022{[^}]*}|$FSI_XSS|"  "$FSI/mysql/init.sql"; rm -f "$FSI/mysql/init.sql.bak"; }
+# [보정] 내부보드 int/app.py 는 db 기동 레이스로 죽으면 재기동 안 됨(entrypoint 가 '&' 백그라운드) → XSS 챌린지용 재시작 루프(멱등)
+if [ -f "$FSI/int/entrypoint.sh" ] && ! grep -q 'while true; do python3 /app/app.py' "$FSI/int/entrypoint.sh"; then
+  sed -i.bak 's#^python3 /app/app.py&#while true; do python3 /app/app.py; sleep 2; done \&#' "$FSI/int/entrypoint.sh"; rm -f "$FSI/int/entrypoint.sh.bak"
+fi
+
+# ── (4) CRLF→LF 정규화(컨테이너용 파일) ──
 find "$ST" "$AB_B" "$AB_A" \
      \( -name '*.sh' -o -name 'Dockerfile' -o -name 'id_rsa' -o -name 'id_rsa.pub' -o -name 'entrypoint.sh' \) \
      -not -path '*/.git/*' -exec sed -i 's/\r$//' {} +
+{ [ -d "$FSI" ] && find "$FSI" \( -name '*.sh' -o -name 'Dockerfile' -o -name 'entrypoint.sh' -o -name 'init.sql' \) -not -path '*/.git/*' -exec sed -i 's/\r$//' {} + ; } || true
 
 cat <<'EOF'
 
@@ -57,5 +75,6 @@ cat <<'EOF'
     cd challenges/capstone/secret-tunnel  && docker compose up -d --build   # 웹 :8090, SSH :2222
     cd challenges/auth/authbypass-basic   && docker compose up -d --build   # :9001-9003
     cd challenges/auth/authbypass-advanced && docker compose up -d --build  # :9005
+    cd challenges/capstone/fsi-chat       && docker compose up -d --build   # FSI 채팅 :9090 (start --with-fsi 권장)
   (start.ps1 은 이 스크립트를 매 기동 시 호출해 현재 .env 플래그를 재주입한다)
 EOF
