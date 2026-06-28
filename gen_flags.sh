@@ -19,9 +19,10 @@ FLAG_VARS=(
   echo "ADMIN_PASSWORD=$(rnd)"
   echo "PLATFORM_SECRET=$(rnd)"
   for v in "${FLAG_VARS[@]}"; do echo "$v=$(flag)"; done
-  # FSI 채팅(2022_fsi_edu_challs) — repo 하드코딩 플래그(고정값, 랜덤 아님). 스코어보드 채점용.
-  echo "FLAG_FSI_XSS=fsi2022{n0w_you_4re_g00d_at_xss_m4ybe?}"
-  echo "FLAG_FSI_SQLI=fsi2022{yes_y0u_c4n_le4k_fi1e_by_sq1i!}"
+  # FSI 채팅(2022_fsi_edu_challs) — fsi2022{...} 형식 랜덤(배포마다 유니크). setup_external 가 init.sql·mysql/Dockerfile 에 주입.
+  fsiflag() { echo "fsi2022{$(openssl rand -hex 10 2>/dev/null || head -c10 /dev/urandom | od -An -tx1 | tr -d ' \n')}"; }
+  echo "FLAG_FSI_XSS=$(fsiflag)"
+  echo "FLAG_FSI_SQLI=$(fsiflag)"
 } > "$ENVF"
 
 echo "[+] wrote $ENVF  (플래그 ${#FLAG_VARS[@]}개 + ADMIN_PASSWORD)"
