@@ -19,9 +19,10 @@ $lines.Add("# 자동 생성 $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') — 커밋
 $lines.Add("ADMIN_PASSWORD=$(Rnd)")
 $lines.Add("PLATFORM_SECRET=$(Rnd)")
 foreach ($v in $flagVars) { $lines.Add("$v=$(Flag)") }
-# FSI 채팅(2022_fsi_edu_challs) — repo 하드코딩 플래그(고정값, 랜덤 아님). 스코어보드 채점용.
-$lines.Add('FLAG_FSI_XSS=fsi2022{n0w_you_4re_g00d_at_xss_m4ybe?}')
-$lines.Add('FLAG_FSI_SQLI=fsi2022{yes_y0u_c4n_le4k_fi1e_by_sq1i!}')
+# FSI 채팅(2022_fsi_edu_challs) — fsi2022{...} 형식 랜덤(배포마다 유니크). setup_external 가 init.sql·mysql/Dockerfile 에 주입.
+function FsiFlag { "fsi2022{" + (-join ((1..10) | ForEach-Object { '{0:x2}' -f (Get-Random -Maximum 256) })) + "}" }
+$lines.Add("FLAG_FSI_XSS=$(FsiFlag)")
+$lines.Add("FLAG_FSI_SQLI=$(FsiFlag)")
 
 # docker compose 호환을 위해 반드시 LF + UTF-8(BOM 없음) 으로 기록
 $text = ($lines -join "`n") + "`n"
