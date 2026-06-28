@@ -1,4 +1,4 @@
-# 외부 GitHub 챌린지(secret-tunnel · authbypass)를 배치 + .env 플래그 주입 (Windows PowerShell)
+﻿# 외부 GitHub 챌린지(secret-tunnel · authbypass)를 배치 + .env 플래그 주입 (Windows PowerShell)
 # 재실행 안전(idempotent): 이미 받은 폴더는 clone 생략하고, 플래그/키/포트/보정만 '현재 .env' 기준으로 다시 적용.
 #   → gen_flags 로 .env 를 재생성한 뒤 다시 돌리면 외부 챌린지 플래그가 스코어보드와 다시 일치한다.
 # git 필요. 먼저 .\gen_flags.ps1 로 .env 생성.
@@ -70,6 +70,16 @@ if ($fsiSqli -and (Test-Path "$fsi\docker\mysql\Dockerfile")) {
 }
 if ($fsiXss -and (Test-Path "$fsi\mysql\init.sql")) {
   $c = [regex]::Replace([System.IO.File]::ReadAllText("$fsi\mysql\init.sql"), 'fsi2022\{[^}]*\}', $fsiXss); Save-Lf "$fsi\mysql\init.sql" $c
+}
+# [보정] compose(업스트림엔 없는 로컬보정): db 컨테이너명 충돌 회피(authbypass-basic 의 mysql-db) + ext/int db-레이스 자동복구(멱등)
+$fsiComp = "$fsi\docker-compose.yml"
+if (Test-Path $fsiComp) {
+  $c = [System.IO.File]::ReadAllText($fsiComp).Replace('container_name: mysql-db', 'container_name: fsi-mysql-db')   # 앱은 IP(172.22.0.5) 접속이라 무영향
+  if ($c -notmatch 'restart: on-failure') {
+    $c = $c.Replace("  external_server:", "  external_server:`n    restart: on-failure")
+    $c = $c.Replace("  internal_server:", "  internal_server:`n    restart: on-failure")
+  }
+  Save-Lf $fsiComp $c
 }
 # [보정] 내부보드 int/app.py 재시작 루프(db 기동 레이스로 죽어도 부활 — XSS 챌린지용, 멱등)
 $fsiEntry = "$fsi\int\entrypoint.sh"
