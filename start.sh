@@ -86,7 +86,7 @@ if [ "$KEEPENV" = 1 ] && [ -f .env ]; then
   info ".env 유지(--keep-env) — 플래그 재생성 생략."
 else
   info "플래그 생성 (.env)..."
-  ./gen_flags.sh
+  bash ./gen_flags.sh
 fi
 
 # ── 1.5) FSI (옵션) — 172.22.0.0/24 고정 대역을 선점하도록 메인보다 먼저 기동 ──
@@ -138,7 +138,7 @@ ok "스코어보드: $BOARD  (회원가입 → 로그인 → flag 제출)"
 if [ "$NOEXTERNAL" != 1 ]; then
   # 매번 setup_external 호출(멱등): 폴더 없으면 clone, 있으면 '현재 .env' 플래그 재주입.
   info "외부 챌린지 배치/플래그 재주입 (setup_external.sh)..."
-  ./setup_external.sh || warn "setup_external 실패 (네트워크/git 확인)"
+  bash ./setup_external.sh || warn "setup_external 실패 (네트워크/git 확인)"
   for d in "${EXT_DIRS[@]}"; do
     if [ -f "$d/docker-compose.yml" ]; then
       info "외부 챌린지 기동: $d"
