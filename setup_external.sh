@@ -9,6 +9,16 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 [ -f "$ROOT/.env" ] || { echo "[!] 먼저 ./gen_flags.sh 로 .env 를 생성하세요."; exit 1; }
 getf(){ grep "^$1=" "$ROOT/.env" | cut -d= -f2-; }
 reinject(){ sed -i.bak "s|flag{[^}]*}|$2|" "$1" && rm -f "$1.bak"; }   # 멱등 주입(현재 flag{...} 를 새 값으로)
+# build 시 host 네트워크를 쓰도록 compose override 생성(멱등). DNS 제약 환경(컨테이너 UDP/53 차단 +
+# 외부 DNS 차단, alpine musl 은 use-vc 미지원)에서도 빌드가 호스트 systemd-resolved 로 DNS 해석하게 한다.
+# start.sh/start.ps1 이 'docker-compose.hostnet.yml' 존재 시 자동으로 -f 포함한다.
+write_hostnet_override(){   # $1=대상 디렉터리, $2.. = 서비스명들
+  local dir="$1"; shift; local f="$dir/docker-compose.hostnet.yml"
+  { echo "# [자동생성: setup_external.sh] build 시 host 네트워크 사용 → DNS 제약 환경 빌드 보정.";
+    echo "services:";
+    for s in "$@"; do printf '  %s:\n    build:\n      network: host\n' "$s"; done
+  } > "$f"
+}
 
 ST="$ROOT/challenges/capstone/secret-tunnel"
 AB_B="$ROOT/challenges/auth/authbypass-basic"
@@ -31,6 +41,8 @@ if [ ! -f "$KEYS/id_rsa" ] || ! grep -q "PRIVATE KEY" "$KEYS/id_rsa" 2>/dev/null
 fi
 # extserver Dockerfile 업스트림 오타: 'echo ... > flag.txt' 줄에 RUN 누락(멱등: ^echo 만 매치)
 sed -i.bak 's|^echo "flag{dummy_flag_1}"|RUN echo "flag{dummy_flag_1}"|' "$ST/docker/extserver/Dockerfile" && rm -f "$ST/docker/extserver/Dockerfile.bak"
+# alpine(musl) 3개 이미지 — host 네트워크 빌드 override(DNS 보정)
+write_hostnet_override "$ST" extserver intserver flagserver
 
 # ── (2) authbypass basic/advanced ──
 if [ ! -d "$AB_B" ] || [ ! -d "$AB_A" ]; then
@@ -46,7 +58,7 @@ reinject "$AB_A/docker-compose.yml" "$(getf FLAG_AUTHBYPASS_ADV)"
 # advanced 호스트포트 9002→9005 (멱등: 이미 9005면 매치 안 됨)
 sed -i.bak 's|"9002:9002"|"9005:9002"|' "$AB_A/docker-compose.yml" && rm -f "$AB_A/docker-compose.yml.bak"
 
-# ── (3) FSI 채팅(2022_fsi_edu_challs) — 캡스톤 XSS/SQLi (:9090, 자체 compose · 172.22.0.0/24 고정) ──
+# ── (3) FSI 채팅(2022_fsi_edu_challs) — 캡스톤 XSS/SQLi (:9090, 자체 compose · 10.111.0.0/24 로 재매핑) ──
 FSI="$ROOT/challenges/capstone/fsi-chat"
 if [ ! -d "$FSI" ]; then
   echo "[*] FSI(2022_fsi_edu_challs) clone..."
@@ -61,7 +73,7 @@ FSI_SQLI="$(getf FLAG_FSI_SQLI || true)"; FSI_XSS="$(getf FLAG_FSI_XSS || true)"
 # [보정] compose(업스트림엔 없는 로컬보정): db 컨테이너명 충돌 회피(authbypass-basic 의 mysql-db) + ext/int db-레이스 자동복구(멱등)
 FSI_COMPOSE="$FSI/docker-compose.yml"
 if [ -f "$FSI_COMPOSE" ]; then
-  sed -i.bak 's|container_name: mysql-db|container_name: fsi-mysql-db|' "$FSI_COMPOSE" && rm -f "$FSI_COMPOSE.bak"   # 앱은 IP(172.22.0.5) 접속이라 무영향
+  sed -i.bak 's|container_name: mysql-db|container_name: fsi-mysql-db|' "$FSI_COMPOSE" && rm -f "$FSI_COMPOSE.bak"   # 앱은 고정 IP(10.111.0.5) 접속이라 무영향
   if ! grep -q 'restart: on-failure' "$FSI_COMPOSE"; then
     sed -i.bak -e 's|^  external_server:|  external_server:\n    restart: on-failure|' -e 's|^  internal_server:|  internal_server:\n    restart: on-failure|' "$FSI_COMPOSE" && rm -f "$FSI_COMPOSE.bak"
   fi
@@ -70,6 +82,14 @@ fi
 if [ -f "$FSI/int/entrypoint.sh" ] && ! grep -q 'while true; do python3 /app/app.py' "$FSI/int/entrypoint.sh"; then
   sed -i.bak 's#^python3 /app/app.py&#while true; do python3 /app/app.py; sleep 2; done \&#' "$FSI/int/entrypoint.sh"; rm -f "$FSI/int/entrypoint.sh.bak"
 fi
+# [보정] 고정 서브넷 172.22.0.0/24 → 10.111.0.0/24 재매핑(멱등). 업스트림은 172.22 고정이나 이 대역은
+#   docker 기본 풀(172.16/12) 안이라 다른 프로젝트 bridge·무관 프로젝트(*/16 점유)와 'Pool overlaps' 충돌.
+#   풀 밖 10.111.0.0/24 로 옮기면 auto-allocation 충돌이 원천 차단. 앱·iptables·봇 하드코딩 IP 도 함께 이동.
+for f in "$FSI/docker-compose.yml" "$FSI/int/app.py" "$FSI/int/entrypoint.sh" "$FSI/int/bot/bot.py" "$FSI/ext/app.py"; do
+  [ -f "$f" ] && sed -i 's/172\.22\.0/10.111.0/g' "$f"
+done
+# ubuntu/debian/mysql 3개 서비스 — host 네트워크 빌드 override(DNS 보정)
+write_hostnet_override "$FSI" external_server internal_server db
 
 # ── (4) CRLF→LF 정규화(컨테이너용 파일) ──
 find "$ST" "$AB_B" "$AB_A" \
@@ -79,10 +99,11 @@ find "$ST" "$AB_B" "$AB_A" \
 
 cat <<'EOF'
 
-[+] 완료(배치/플래그 주입). 외부 챌린지는 각자 자체 compose 로 기동:
-    cd challenges/capstone/secret-tunnel  && docker compose up -d --build   # 웹 :8090, SSH :2222
+[+] 완료(배치/플래그 주입). 외부 챌린지는 각자 자체 compose 로 기동.
+    secret-tunnel·fsi-chat 은 빌드 DNS 보정용 docker-compose.hostnet.yml 을 함께 넘긴다(host 네트워크 빌드):
+    cd challenges/capstone/secret-tunnel  && docker compose -f docker-compose.yml -f docker-compose.hostnet.yml up -d --build   # 웹 :8090, SSH :2222
     cd challenges/auth/authbypass-basic   && docker compose up -d --build   # :9001-9003
     cd challenges/auth/authbypass-advanced && docker compose up -d --build  # :9005
-    cd challenges/capstone/fsi-chat       && docker compose up -d --build   # FSI 채팅 :9090 (start --with-fsi 권장)
-  (start.ps1 은 이 스크립트를 매 기동 시 호출해 현재 .env 플래그를 재주입한다)
+    cd challenges/capstone/fsi-chat       && docker compose -f docker-compose.yml -f docker-compose.hostnet.yml up -d --build   # FSI 채팅 :9090 (10.111.0.0/24 · start --with-fsi 권장)
+  (start.sh/start.ps1 은 hostnet override 가 있으면 자동으로 -f 포함하고, 매 기동 시 이 스크립트로 .env 플래그를 재주입한다)
 EOF

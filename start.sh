@@ -16,7 +16,7 @@
 # ※ 외부 챌린지(authbypass-basic/advanced·secret-tunnel)는 기본으로 함께 기동되며, 매 기동 시
 #    setup_external.sh 를 호출해 '현재 .env' 플래그를 재주입한다(폴더 없으면 clone 까지).
 #    → gen_flags 로 .env 를 새로 만들어도 외부 챌린지 flag 가 스코어보드와 항상 일치.
-#    FSI 는 별도 레포 + 172.22.0.0/24 고정이라 --with-fsi 일 때만(메인보다 먼저) 기동.
+#    FSI 는 별도 레포 + 10.111.0.0/24 고정이라 --with-fsi 일 때만(메인보다 먼저) 기동.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
@@ -31,6 +31,15 @@ EXT_DIRS=(
 info(){ printf '\033[36m[*] %s\033[0m\n' "$1"; }
 ok(){   printf '\033[32m[+] %s\033[0m\n' "$1"; }
 warn(){ printf '\033[33m[!] %s\033[0m\n' "$1"; }
+
+# 외부 챌린지 기동 시 적용할 -f 인자(현재 디렉터리 기준).
+#   docker-compose.hostnet.yml(있으면) = 빌드 시 host 네트워크 사용 → DNS 제약 환경에서도 빌드 성공.
+#   (setup_external.sh 가 secret-tunnel·fsi-chat 에 이 override 를 생성한다)
+compose_overrides(){
+  local a="-f docker-compose.yml"
+  [ -f docker-compose.hostnet.yml ] && a="$a -f docker-compose.hostnet.yml"
+  echo "$a"
+}
 
 open_url(){
   if   command -v xdg-open >/dev/null 2>&1; then xdg-open "$1" >/dev/null 2>&1 &
@@ -89,19 +98,15 @@ else
   bash ./gen_flags.sh
 fi
 
-# ── 1.5) FSI (옵션) — 172.22.0.0/24 고정 대역을 선점하도록 메인보다 먼저 기동 ──
+# ── 1.5) FSI (옵션) — 고정 대역(10.111.0.0/24, docker 기본 풀 밖)이라 메인/외부와 충돌 없음 ──
 if [ "$WITHFSI" = 1 ]; then
   if [ ! -f "$FSI_DIR/docker-compose.yml" ]; then
     info "FSI 폴더 없음 → setup_external.sh 로 clone+보정(레포 내부 challenges/capstone/fsi-chat)..."
     bash ./setup_external.sh || warn "setup_external 실패 (git/네트워크 확인)"
   fi
   if [ -f "$FSI_DIR/docker-compose.yml" ]; then
-    # secret-tunnel 의 자동 bridge 가 172.22 를 선점하면 FSI 가 못 뜬다 → 잠시 내렸다가 FSI 선점.
-    if [ -f "challenges/capstone/secret-tunnel/docker-compose.yml" ]; then
-      ( cd "challenges/capstone/secret-tunnel" && docker compose down >/dev/null 2>&1 ) || true
-    fi
-    info "FSI 기동(메인보다 먼저, 172.22 대역 선점): $FSI_DIR"
-    ( cd "$FSI_DIR" && docker compose up -d --build )
+    info "FSI 기동(메인보다 먼저): $FSI_DIR"
+    ( cd "$FSI_DIR" && docker compose $(compose_overrides) up -d --build )
     ok "FSI 채팅: http://localhost:9090  (스코어보드 fsi-chat-xss / fsi-chat-sqli)"
   else
     warn "FSI 폴더 없음: $FSI_DIR  → --with-fsi 건너뜀"
@@ -146,7 +151,7 @@ if [ "$NOEXTERNAL" != 1 ]; then
   for d in "${EXT_DIRS[@]}"; do
     if [ -f "$d/docker-compose.yml" ]; then
       info "외부 챌린지 기동: $d"
-      ( cd "$d" && docker compose up -d --build )
+      ( cd "$d" && docker compose $(compose_overrides) up -d --build )
     else
       warn "외부 챌린지 폴더 없음: $d  → ./setup_external.sh 수동 실행 필요"
     fi
