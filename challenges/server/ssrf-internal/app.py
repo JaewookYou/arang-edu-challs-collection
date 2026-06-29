@@ -7,7 +7,7 @@ FLAG = os.environ.get("FLAG_SSRF", "flag{local}")
 
 @app.route("/")
 def index():
-    return ('<h3>URL 미리보기</h3><form><input name="url" value="http://example.com" style="width:60%">'
+    return ('<h3>URL 미리보기</h3><form action="/fetch"><input name="url" value="http://example.com" style="width:60%">'
             '<button>fetch</button></form>'
             '<p>서버가 입력한 URL 을 대신 요청합니다. 내부 전용 자원에 닿을 수 있을까?</p>')
 
