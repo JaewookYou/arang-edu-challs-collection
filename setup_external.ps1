@@ -20,6 +20,14 @@ function Reinject($path, $newflag) {
   Save-Lf $path $c
 }
 function Normalize-Eol($path) { Save-Lf $path ([System.IO.File]::ReadAllText($path) -replace "`r`n", "`n") }
+# build 시 host 네트워크를 쓰도록 compose override 생성(멱등). DNS 제약 환경(컨테이너 UDP/53 차단 +
+# 외부 DNS 차단, alpine musl 은 use-vc 미지원)에서도 빌드가 호스트 DNS 로 해석하게 한다.
+# start.sh/start.ps1 이 'docker-compose.hostnet.yml' 존재 시 자동으로 -f 포함한다.
+function Write-HostnetOverride($dir, [string[]]$services) {
+  $sb = "# [자동생성: setup_external.ps1] build 시 host 네트워크 사용 -> DNS 제약 환경 빌드 보정.`nservices:`n"
+  foreach ($s in $services) { $sb += "  ${s}:`n    build:`n      network: host`n" }
+  Save-Lf "$dir\docker-compose.hostnet.yml" $sb
+}
 
 # ── (1) secret-tunnel ──
 $st = "$ROOT\challenges\capstone\secret-tunnel"
@@ -39,6 +47,8 @@ if ($needKey) {
 # extserver Dockerfile 업스트림 오타: 'echo ... flag.txt' 줄에 RUN 누락(멱등: ^echo 만 매치)
 $exd = [System.IO.File]::ReadAllText("$st\docker\extserver\Dockerfile") -replace "(?m)^echo `"flag\{dummy_flag_1\}`"", "RUN echo `"flag{dummy_flag_1}`""
 Save-Lf "$st\docker\extserver\Dockerfile" $exd
+# alpine(musl) 3개 이미지 — host 네트워크 빌드 override(DNS 보정)
+Write-HostnetOverride $st @('extserver','intserver','flagserver')
 
 # ── (2) authbypass basic/advanced ──
 $tmp = Join-Path $env:TEMP ("ab_" + [guid]::NewGuid().ToString('N'))
@@ -57,7 +67,7 @@ Reinject "$abA\docker-compose.yml" (Get-Flag FLAG_AUTHBYPASS_ADV)
 $ca = [System.IO.File]::ReadAllText("$abA\docker-compose.yml").Replace('"9002:9002"', '"9005:9002"')
 Save-Lf "$abA\docker-compose.yml" $ca
 
-# ── (3) FSI 채팅(2022_fsi_edu_challs) — 캡스톤 XSS/SQLi (:9090, 자체 compose · 172.22.0.0/24 고정) ──
+# ── (3) FSI 채팅(2022_fsi_edu_challs) — 캡스톤 XSS/SQLi (:9090, 자체 compose · 10.111.0.0/24 로 재매핑) ──
 $fsi = "$ROOT\challenges\capstone\fsi-chat"
 if (-not (Test-Path $fsi)) {
   Write-Host "[*] FSI(2022_fsi_edu_challs) clone..."
@@ -74,7 +84,7 @@ if ($fsiXss -and (Test-Path "$fsi\mysql\init.sql")) {
 # [보정] compose(업스트림엔 없는 로컬보정): db 컨테이너명 충돌 회피(authbypass-basic 의 mysql-db) + ext/int db-레이스 자동복구(멱등)
 $fsiComp = "$fsi\docker-compose.yml"
 if (Test-Path $fsiComp) {
-  $c = [System.IO.File]::ReadAllText($fsiComp).Replace('container_name: mysql-db', 'container_name: fsi-mysql-db')   # 앱은 IP(172.22.0.5) 접속이라 무영향
+  $c = [System.IO.File]::ReadAllText($fsiComp).Replace('container_name: mysql-db', 'container_name: fsi-mysql-db')   # 앱은 고정 IP(10.111.0.5) 접속이라 무영향
   if ($c -notmatch 'restart: on-failure') {
     $c = $c.Replace("  external_server:", "  external_server:`n    restart: on-failure")
     $c = $c.Replace("  internal_server:", "  internal_server:`n    restart: on-failure")
@@ -87,6 +97,13 @@ if ((Test-Path $fsiEntry) -and -not (Select-String -Path $fsiEntry -Pattern 'whi
   $e = [System.IO.File]::ReadAllText($fsiEntry) -replace '(?m)^python3 /app/app\.py&', 'while true; do python3 /app/app.py; sleep 2; done &'
   Save-Lf $fsiEntry $e
 }
+# [보정] 고정 서브넷 172.22.0.0/24 -> 10.111.0.0/24 재매핑(멱등). 172.22 는 docker 기본 풀(172.16/12) 안이라
+#   다른 프로젝트 bridge·무관 프로젝트(*/16 점유)와 'Pool overlaps' 충돌. 풀 밖 10.111 로 옮겨 원천 차단.
+foreach ($f in @("$fsi\docker-compose.yml","$fsi\int\app.py","$fsi\int\entrypoint.sh","$fsi\int\bot\bot.py","$fsi\ext\app.py")) {
+  if (Test-Path $f) { Save-Lf $f ([System.IO.File]::ReadAllText($f).Replace('172.22.0', '10.111.0')) }
+}
+# ubuntu/debian/mysql 3개 서비스 — host 네트워크 빌드 override(DNS 보정)
+Write-HostnetOverride $fsi @('external_server','internal_server','db')
 
 # ── (4) CRLF→LF 정규화 ──
 foreach ($d in @($st, $abB, $abA, $fsi)) {
@@ -98,8 +115,9 @@ foreach ($d in @($st, $abB, $abA, $fsi)) {
 }
 
 Write-Host ""
-Write-Host "[+] 완료(배치/플래그 주입). 외부 챌린지는 각자 자체 compose 로 기동:"
-Write-Host "    cd challenges\capstone\secret-tunnel  ; docker compose up -d --build   # 웹 :8090, SSH :2222"
+Write-Host "[+] 완료(배치/플래그 주입). 외부 챌린지는 각자 자체 compose 로 기동."
+Write-Host "    secret-tunnel·fsi-chat 은 빌드 DNS 보정용 docker-compose.hostnet.yml 을 함께 넘긴다(host 네트워크 빌드):"
+Write-Host "    cd challenges\capstone\secret-tunnel  ; docker compose -f docker-compose.yml -f docker-compose.hostnet.yml up -d --build   # 웹 :8090, SSH :2222"
 Write-Host "    cd challenges\auth\authbypass-basic   ; docker compose up -d --build   # :9001-9003"
 Write-Host "    cd challenges\auth\authbypass-advanced ; docker compose up -d --build  # :9005"
-Write-Host "    cd challenges\capstone\fsi-chat       ; docker compose up -d --build   # FSI 채팅 :9090 (start -WithFsi 권장)"
+Write-Host "    cd challenges\capstone\fsi-chat       ; docker compose -f docker-compose.yml -f docker-compose.hostnet.yml up -d --build   # FSI 채팅 :9090 (10.111.0.0/24 · start -WithFsi 권장)"
