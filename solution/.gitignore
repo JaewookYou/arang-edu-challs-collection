@@ -5,6 +5,8 @@ __pycache__/
 *.pyc
 # 임시 익스플로잇 파일
 x.xml
+# secret_tunnel_jump.py 가 런타임에 유출/저장하는 개인키
+id_rsa
 shell.phtml
 shell.jspx
 *.class
