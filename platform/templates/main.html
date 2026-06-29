@@ -42,7 +42,8 @@
   else if (h === '#no'){ r.style.color='#D92D20'; r.textContent='틀렸습니다. 다시 시도하세요.'; }
   if (h){ history.replaceState(null,'',location.pathname); }
 
-  // 챌린지 링크는 '대시보드를 연 호스트'를 따라가도록 호스트명만 교체(registry 의 localhost 하드코딩 대신).
+  // 챌린지 링크는 서버(app.py localize_url)가 접속 Host 로 이미 보정하지만,
+  // 프록시 등으로 Host 가 다를 때를 대비한 클라이언트 폴백: 호스트명만 현재 호스트로 교체.
   // edu.arang.kr·사내 IP·localhost 등 어떤 호스트로 접속하든 그 호스트의 동일 포트로 연결된다.
   document.querySelectorAll('a.chlink').forEach(function(a){
     try { var u = new URL(a.href); u.hostname = location.hostname; a.href = u.href; } catch (e) {}

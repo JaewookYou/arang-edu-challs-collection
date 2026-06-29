@@ -4,6 +4,7 @@
 목록 / 플래그 제출 / 채점 / 랭킹만 담당한다. (문제 컨테이너와 직접 통신하지 않음)
 """
 import os, json, time
+from urllib.parse import urlsplit, urlunsplit
 import yaml
 from flask import Flask, request, session, redirect, url_for, render_template
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -43,6 +44,21 @@ def save_users(u):
 def current_user():
     return session.get("uid")
 
+# ── 챌린지 URL 호스트 보정 ──
+# registry.yaml 의 url 은 localhost 로 고정돼 있지만, 학습자가 어떤 호스트로 대시보드에
+# 접속했든(edu.arang.kr·사내 IP·localhost) 그 호스트의 동일 포트로 링크가 향하도록
+# 요청 Host 헤더의 호스트명으로 url 의 호스트만 교체한다(포트/경로/스킴은 유지).
+def localize_url(url, req_host):
+    try:
+        host = (req_host or "").rsplit(":", 1)[0]  # 플랫폼(:9000) 포트 제거 → 호스트명만
+        if not host:
+            return url
+        parts = urlsplit(url)
+        netloc = "{}:{}".format(host, parts.port) if parts.port else host
+        return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+    except Exception:
+        return url
+
 # ── 라우트 ──
 @app.route("/")
 def index():
@@ -52,7 +68,10 @@ def index():
     solved = set(users.get(current_user(), {}).get("solved", []))
     grouped = {k: [] for k in CATEGORIES}
     for c in CHALLENGES:
-        grouped.setdefault(c["category"], []).append({**c, "solved": c["id"] in solved})
+        item = {**c, "solved": c["id"] in solved}
+        if item.get("url"):
+            item["url"] = localize_url(item["url"], request.host)
+        grouped.setdefault(c["category"], []).append(item)
     total = len([c for c in CHALLENGES if c.get("status") == "ready"])
     return render_template("main.html", categories=CATEGORIES, grouped=grouped,
                            solved=solved, uid=current_user(), solved_n=len(solved), total=total)
