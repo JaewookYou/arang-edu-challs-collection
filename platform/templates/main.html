@@ -23,7 +23,9 @@
             <span class="dot" style="background:{{ '#1E8E5A' if c.solved else ('#2563EB' if c.status=='ready' else '#C2CCD6') }}"></span>
             {% if c.status=='ready' %}<a class="chlink" href="{{ c.url }}" target="_blank">{{ c.title }}</a>{% else %}{{ c.title }}{% endif %}
           </div>
-          <div class="d">난이도 {{ '★' * c.difficulty }}{% if c.needs_bot %} · 봇{% endif %} · :{{ c.port }}</div>
+          <div class="d">난이도 {{ '★' * c.difficulty }}{% if c.needs_bot %} · 봇{% endif %} · :{{ c.port }}{% if c.repo %} ·
+            {# 소스 링크(화이트박스). class 는 chlink 가 아니어야 한다 — 아래 스크립트의 호스트 보정 대상에서 제외 #}
+            <a class="srclink" href="{{ c.repo }}" target="_blank" rel="noopener noreferrer">소스</a>{% endif %}</div>
         </div>
         {% if c.solved %}<span class="pill ok">해결</span>
         {% elif c.status=='ready' %}<span class="pill go">도전</span>
