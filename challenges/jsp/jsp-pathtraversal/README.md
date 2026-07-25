@@ -22,7 +22,7 @@ make up-jsp   # 또는: docker compose up -d --build jsp-pathtraversal
 2. `?file=../WEB-INF/flag.txt` → flag.
 3. `?file=../WEB-INF/web.xml` 등 내부 파일도 노출(캡스톤 빌드업).
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 정규화 후 화이트리스트 경로 검사, WEB-INF 접근 차단, 사용자 입력 경로 금지.

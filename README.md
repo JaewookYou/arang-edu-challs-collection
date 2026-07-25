@@ -8,7 +8,7 @@ platform/   스코어보드 전용 (registry.yaml 만 읽어 목록·채점·랭
 bot/        공용 headless-chromium 봇 (클라이언트 문제용, 내부망 전용)
 _base/      공통 골격(flask_board 등) — 문제는 '취약한 부분'만 남긴다
 challenges/<category>/<id>/   문제 1개 = 1 자기완결 폴더
-            └ challenge.yaml · Dockerfile · app.py(또는 src) · solution/ · README.md
+            └ challenge.yaml · Dockerfile · app.py(또는 src) · README.md
 ```
 
 ## 빠른 시작
@@ -41,7 +41,7 @@ chmod +x start.sh               # 최초 1회
 ```
 
 ## 문제 추가 방법
-1. `challenges/<category>/<id>/` 생성 → `app.py`(또는 src) + `challenge.yaml` + `Dockerfile` + `README.md` + `solution/`.
+1. `challenges/<category>/<id>/` 생성 → `app.py`(또는 src) + `challenge.yaml` + `Dockerfile` + `README.md`. (참조 풀이는 강사용 비공개 레포)
 2. 클라이언트 게시판류면 `_base/flask_board` 의 `create_app(...)` 에 취약 옵션만 전달.
 3. `platform/registry.yaml` 에 항목 추가(status: ready), `gen_flags.sh` 에 `FLAG_*` 추가.
 4. `docker-compose.yml` 에 서비스 + 프로필 추가.
@@ -51,7 +51,7 @@ chmod +x start.sh               # 최초 1회
 - ✅ **29문제 등록(ready)** — client 8 · injection 8 · **auth 4** · logic 1 · server 3 · jsp 3 · **capstone 2**
   - 검증완료(실 익스플로잇→flag): server-side 7 + csrf 2 + xss/domclob/proto(jsdom) → 13문제
   - 원본 기믹 1:1 복원: xss/csrf/xsleak/sqli/lfi/cmdi/domclob/proto (`../문답해설.txt` 그대로)
-  - 정적 코드리뷰 완료(`docs/REVIEW.md`): 빌드컨텍스트·플래그 주입·DB연동 정합. **실 docker build/run 은 배포 호스트에서 1회 필요**
+  - 정적 코드리뷰 완료: 빌드컨텍스트·플래그 주입·DB연동 정합. **실 docker build/run 은 배포 호스트에서 1회 필요**
 - **PHP·고난도 캡스톤 제외**: 금융권 담당자 대상이라 `php-chain`·`fsi-chain` 제거. 대신 ↓ 외부 챌린지 도입.
 - 캡스톤 2종: `jsp-chain`(WEB-INF→탈취, :9711) · `secret-tunnel`(SSH 터널/피벗→내부 flag, :8090, 외부레포)
 - **외부 GitHub 챌린지(클론)** — `./setup_external.sh`(Windows: `.\setup_external.ps1`) 로 받아 배치+플래그 주입:

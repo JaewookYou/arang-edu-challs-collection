@@ -22,7 +22,7 @@ make up-client   # 또는: docker compose up -d --build csrf-2 bot platform
 2. XSS(백틱 기법)로 admin 권한에서 `/changepw` 를 읽어 토큰 파싱.
 3. 같은 스크립트로 `/changepw?...&csrf_token=` 호출 → admin 탈취 → `/board/0`.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 토큰 + SameSite + XSS 차단(출력 escape, CSP).

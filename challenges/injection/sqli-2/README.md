@@ -21,7 +21,7 @@ make up-injection   # 또는: docker compose up -d --build sqli-2 db
 2. 공백 대신 `%0a`, admin 은 `concat('ad','min')` 등으로 구성.
 3. 예: `userid=a'='a'%23%0aand%23%0auserid=concat('ad','min')%23`.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 블랙리스트 WAF 대신 Prepared Statement.

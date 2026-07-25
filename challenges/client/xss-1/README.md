@@ -36,7 +36,7 @@ docker compose up -d xss-1 bot platform   # 또는: make up-client
 - 수집기는 봇 컨테이너에서 도달 가능해야 한다(호스트의 리스너 → `host.docker.internal` 또는 호스트 IP).
 </details>
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md) (강사용)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 출력 시 컨텍스트에 맞는 escape(HTML 엔티티 인코딩), 프레임워크 자동 escape 유지(`|safe` 금지), 민감 쿠키는 `HttpOnly`, CSP 적용.

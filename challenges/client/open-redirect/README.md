@@ -22,7 +22,7 @@ make up-client   # 또는: docker compose up -d --build open-redirect bot platfo
 2. 검사 로직(`localhost` 포함/`/`시작)의 허점 파악.
 3. `next=//evil.com` 또는 `next=https://localhost.evil.com/` 으로 외부 이동 성공 → flag.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 리다이렉트 대상은 허용목록(allow-list)으로 검증, 상대경로만 허용.

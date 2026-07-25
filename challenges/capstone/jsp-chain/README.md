@@ -28,7 +28,7 @@ docker compose up -d --build jsp-chain
 3. 디컴파일 → `OPS_KEY = "..."` 와 `Runtime.exec(cmd)` 확인.
 4. `/sys/exec-9f3a?key=<발견한키>&cmd=cat /flag` → flag.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 학습 포인트
 경로조작으로 *소스 자체를 확보*하는 실무 감각 · 컴파일 산출물 디컴파일 · 복원 소스 오딧 → 취약점 도출 · 연계 익스플로잇.

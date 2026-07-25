@@ -21,7 +21,7 @@ make up-injection   # 또는: docker compose up -d --build sqli-3 db
 2. 길이만큼 반복 → 비밀번호 복원.
 3. 복원한 값이 flag.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 Prepared Statement, 일정한 응답(타이밍/메시지 차이 제거).

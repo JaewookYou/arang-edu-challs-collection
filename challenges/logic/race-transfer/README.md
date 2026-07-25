@@ -21,7 +21,7 @@ docker compose up -d --build race-transfer
 2. `/transfer?amt=100` 을 동시에 수십 번 전송(race).
 3. 검증을 동시에 통과 → vault 가 1000+ 누적 → `/flag`.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 공유자원 갱신을 원자적으로(트랜잭션/락/SELECT FOR UPDATE), 잔액 차감과 검증을 한 단위로.

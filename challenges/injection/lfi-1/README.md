@@ -21,7 +21,7 @@ make up-injection   # 또는: docker compose up -d --build lfi-1 db
 2. `?p=php://filter/convert.base64-encode/resource=config.php`.
 3. base64 디코딩 → 주석 속 flag.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 include 대상은 화이트리스트/고정, 사용자 입력 경로 금지, allow_url_include off.

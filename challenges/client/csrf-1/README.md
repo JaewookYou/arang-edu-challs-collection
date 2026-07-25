@@ -22,7 +22,7 @@ make up-client   # 또는: docker compose up -d --build csrf-1 bot platform
 2. 따옴표/script 는 필터됨 → `<img src=/changepw?userid=admin&userpw=pwned>` 작성.
 3. 신고 → admin 봇 방문 시 변경 발동 → admin/pwned 로 로그인 → `/board/0` flag.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 CSRF 토큰, SameSite 쿠키, 상태변경은 POST + Referer 검증.

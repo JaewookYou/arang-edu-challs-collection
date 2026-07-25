@@ -21,7 +21,7 @@ docker compose up -d --build xxe-1
 2. DOCTYPE 으로 SYSTEM 엔티티 정의.
 3. `&xxe;` 를 name 에 넣어 /flag.txt 유출.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 외부 엔티티/DTD 비활성화(`resolve_entities=False`, `no_network=True`, DTD 금지).

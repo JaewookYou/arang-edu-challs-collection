@@ -22,7 +22,7 @@ make up-jsp   # 또는: docker compose up -d --build jsp-sqli
 2. 또는 `userid=' or userid='admin'-- -`.
 3. admin 인식 → flag.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 PreparedStatement 파라미터 바인딩.

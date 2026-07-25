@@ -22,7 +22,7 @@ make up-jsp   # 또는: docker compose up -d --build jsp-upload
 2. `uploads/shell.jspx?c=cat /flag` 접근.
 3. flag 획득.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 확장자 화이트리스트, 업로드 경로 실행권한 제거, 랜덤 파일명, 별도 스토리지.

@@ -21,7 +21,7 @@ make up-injection   # 또는: docker compose up -d --build prototype-pollution d
 2. code 에 flag(div#flag) 외부 전송 JS.
 3. report 로 봇 방문 → 유출.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 merge 시 __proto__/constructor 키 차단, Object.create(null), 스키마 검증.

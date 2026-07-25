@@ -21,7 +21,7 @@ make up-injection   # 또는: docker compose up -d --build domclobbering db
 2. `c` 파라미터에 무따옴표/무괄호 JS 로 flag(div#flag) 외부 전송.
 3. report 로 봇 방문 → 봇 화면에서만 flag 가 보임.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 DOMPurify 로 id/name 제거, 사용 전 변수 초기화, eval 제거.

@@ -22,7 +22,7 @@ make up-client   # 또는: docker compose up -d --build xss-2 bot platform
 2. `onerror=` 사이에 탭/개행을 넣거나 HTML 엔티티로 우회.
 3. 신고로 admin 봇 방문 → `document.cookie` 외부 전송.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 블랙리스트가 아닌 출력 escape(화이트리스트), HttpOnly 쿠키, CSP.

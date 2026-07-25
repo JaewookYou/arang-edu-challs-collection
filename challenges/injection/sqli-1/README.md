@@ -21,7 +21,7 @@ make up-injection   # 또는: docker compose up -d --build sqli-1 db
 2. 또는 `userid=' or userid='admin'-- -`.
 3. admin 으로 인식되면 flag 출력.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 Prepared Statement(파라미터 바인딩), 입력 검증.

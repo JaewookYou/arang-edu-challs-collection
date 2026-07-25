@@ -21,7 +21,7 @@ make up-injection   # 또는: docker compose up -d --build lfi-2 db
 2. `?p=/tmp/sess_<본인SID>` 를 include → 코드 실행.
 3. /flag2.txt 출력.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 include 화이트리스트, session.save_path 분리, 사용자 입력 경로 금지.

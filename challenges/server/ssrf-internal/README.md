@@ -21,7 +21,7 @@ docker compose up -d --build ssrf-internal
 2. `/fetch?url=http://example.com` 정상 동작 확인.
 3. `/fetch?url=http://127.0.0.1:9502/internal/flag` → 서버가 localhost 로 요청 → flag.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 URL 스킴/호스트 allow-list, 내부망/localhost 차단, 메타데이터 IP 차단, 리다이렉트 검증.

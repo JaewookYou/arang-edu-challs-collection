@@ -21,7 +21,7 @@ docker compose up -d --build idor-balance
 2. `acct` 를 1000(admin) 으로 변경.
 3. admin 계좌 메모에서 flag 획득.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 조회 대상 리소스의 소유자를 세션 사용자와 대조(서버측 인가), 추측 가능한 식별자 회피.

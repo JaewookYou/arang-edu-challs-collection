@@ -22,7 +22,7 @@ make up-client   # 또는: docker compose up -d --build xss-3 bot platform
 2. 필터를 우회하는 XSS 작성(괄호·따옴표 없이).
 3. admin 봇이 글 열람 시 `/board/0` fetch → 외부 전송.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 출력 escape, CSP, 민감정보의 클라이언트 노출 최소화.

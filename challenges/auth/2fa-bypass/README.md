@@ -21,7 +21,7 @@ docker compose up -d --build 2fa-bypass
 2. OTP 를 풀지 않고 `/secret` 로 직접 접근.
 3. 서버가 OTP 완료를 검증하지 않아 flag 노출.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 최종 자원 접근 시 모든 인증 단계 완료 상태를 서버 세션으로 엄격 검증.

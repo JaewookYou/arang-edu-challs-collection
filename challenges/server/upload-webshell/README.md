@@ -21,7 +21,7 @@ make up-injection   # 또는: docker compose up -d --build upload-webshell db
 2. `uploads/shell.phtml?0=cat /flag_upload.txt` 접근.
 3. flag 획득.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 확장자 화이트리스트, 업로드 경로 실행권한 제거, 컨텐츠 검증, 랜덤 파일명.

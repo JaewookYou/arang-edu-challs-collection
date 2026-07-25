@@ -21,7 +21,7 @@ docker compose up -d --build ssti-1
 2. 가젯으로 os 접근.
 3. `cat /flag.txt` 실행 → 플래그.
 
-> 참조 풀이: [`solution/writeup.md`](solution/writeup.md)
+> 참조 풀이(강사용)는 비공개 레포에서 별도 관리한다 — 공개 레포에는 포함하지 않는다.
 
 ## 대응방안
 사용자 입력은 템플릿 변수로만 전달(`render_template`+context), 문자열 결합 금지.
