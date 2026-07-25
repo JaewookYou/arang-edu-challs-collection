@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block title %}반 · 이름 입력{% endblock %}
+{% block body %}
+<form class="auth" method="post" action="/profile">
+  <h1>{% if first %}반 · 이름 입력{% else %}내 정보 수정{% endif %}</h1>
+  <p class="sub">
+    {% if first %}랭킹 표시에 사용됩니다. 한 번만 입력하면 됩니다.
+    {% else %}랭킹에 표시되는 반과 이름입니다.{% endif %}
+  </p>
+  <div class="row2">
+    <select name="classno" aria-label="반">
+      <option value="" {% if not form.classno %}selected{% endif %}>반 선택</option>
+      {% for c in classes %}
+      <option value="{{ c }}" {% if form.classno|string == c|string %}selected{% endif %}>{{ c }}반</option>
+      {% endfor %}
+    </select>
+    <input name="name" placeholder="이름" autocomplete="name" maxlength="20" value="{{ form.name or '' }}">
+  </div>
+  <div class="msg">{{ msg }}</div>
+  <button class="btn" type="submit">저장</button>
+  <p class="sub" style="text-align:center;margin-top:16px">아이디: {{ uid }} · <a href="/logout" style="color:#2563EB">로그아웃</a></p>
+</form>
+{% endblock %}

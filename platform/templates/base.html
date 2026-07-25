@@ -29,15 +29,58 @@
   .chal.planned{opacity:.5}
   .chal .t{font-weight:700;font-size:15px}
   .chal .d{font-size:12px;color:var(--mute);margin-top:3px}
-  /* 문제별 소스(깃) 링크 — 화이트박스 풀이용 */
-  .srclink{color:var(--mute);text-decoration:none;border-bottom:1px dotted var(--line)}
-  .srclink:hover{color:#2563EB;border-bottom-color:#2563EB}
+  /* 문제별 소스(깃) 링크 — 화이트박스 풀이용. 눈에 띄게 알약 버튼으로. */
+  .srclink{display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:4px 10px;border:1px solid #C3D6F5;
+           border-radius:999px;background:#EEF4FE;color:#2563EB;font-size:12px;font-weight:700;line-height:1.4}
+  .srclink svg{width:13px;height:13px;fill:currentColor;flex:0 0 13px}
+  .srclink:hover{background:#2563EB;border-color:#2563EB;color:#fff}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
-  .pill{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:700}
+  .chal>div:first-child{min-width:0}
+  /* 제목이 길어 카드가 2줄이 돼도 배지가 '도/전' 으로 쪼개지지 않게 */
+  .pill{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap;flex:0 0 auto;align-self:flex-start}
   .pill.go{background:#ECF1FE;color:#2563EB}.pill.ok{background:#EAF6EF;color:var(--green)}.pill.soon{background:#F1F4F8;color:var(--mute)}
   .submit{display:flex;gap:10px;margin:6px 0 4px}
   .submit input{flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:8px;font-size:14px}
   table{width:100%;border-collapse:collapse} td,th{padding:11px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:14px} th{color:var(--mute);font-size:12px}
+  /* 가입·프로필의 '반 + 이름' 한 줄 */
+  .auth select{width:100%;padding:11px 13px;margin:6px 0;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;color:var(--ink)}
+  .row2{display:flex;gap:8px} .row2 select{flex:0 0 118px;margin:6px 0} .row2 input{flex:1 1 auto;min-width:0}
+  /* ── 랭킹 ── 접힘: 반·이름·진행바 / 펼침: 카테고리별 문제 칩 */
+  .rank-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .rank-head h1{font-size:24px;margin:0}
+  .rank-sub{color:var(--mute);font-size:13px}
+  .rank{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+  .rrow{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+  .rrow.me{border-color:#2563EB;background:#F8FBFF}
+  .rrow summary{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;list-style:none}
+  .rrow summary::-webkit-details-marker{display:none}
+  .rrow summary:hover{background:var(--card)}
+  .rrow .rk{flex:0 0 26px;text-align:center;font-weight:700;font-size:14px;color:var(--mute)}
+  .rrow .rk.top{color:var(--red)}
+  .rrow .who{flex:1 1 auto;min-width:0}
+  .rrow .who b{font-size:15px}
+  .rrow .who .sub{display:block;color:var(--mute);font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rrow .bar{flex:0 0 150px;height:8px;border-radius:20px;background:#EDF1F6;overflow:hidden}
+  .rrow .bar i{display:block;height:100%;border-radius:20px;background:var(--green)}
+  .rrow .cnt{flex:0 0 58px;text-align:right;font-size:12px;color:var(--mute)}
+  .rrow .cnt b{font-size:17px;color:var(--ink)}
+  .rrow .chev{flex:0 0 12px;font-size:11px;color:var(--mute);transition:transform .15s}
+  .rrow[open] .chev{transform:rotate(180deg)}
+  .rdet{border-top:1px solid var(--line);background:var(--card);padding:4px 14px 10px}
+  .crow{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .crow:last-child{border-bottom:none}
+  .clab{flex:0 0 136px;font-size:12px;font-weight:700;color:var(--body);padding-top:2px;white-space:nowrap}
+  .clab span{color:var(--mute);font-weight:400}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
+  .chip{font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--line);background:#fff;color:#B3BFCB}
+  .chip.on{background:#EAF6EF;border-color:#BFE4CF;color:var(--green);font-weight:700}
+  .rdet-empty,.empty{color:var(--mute);font-size:13px;margin:8px 0 4px}
+  @media (max-width:640px){
+    .rrow summary{gap:8px;padding:11px 12px}
+    .rrow .bar{flex-basis:56px}
+    .clab{flex-basis:100%;padding-bottom:4px}
+    .crow{flex-wrap:wrap;gap:4px}
+  }
 </style>
 </head>
 <body>

@@ -1,15 +1,41 @@
 {% extends "base.html" %}{% block title %}랭킹{% endblock %}
 {% block body %}
-<h1 style="font-size:24px;margin:0 0 16px">랭킹</h1>
-<table>
-  <tr><th style="width:60px">#</th><th>참가자</th><th style="width:120px">해결 수</th></tr>
+<div class="rank-head">
+  <h1>랭킹</h1>
+  <span class="rank-sub">참가자 {{ rows|length }}명 · 전체 {{ total }}문제</span>
+</div>
+
+{# 문제가 31개라 한 행에 다 펼치면 읽히지 않는다.
+   접힘 = 반·이름·진행바(한눈에 비교), 펼침 = 카테고리별 문제 칩(무엇을 풀었는지).
+   details/summary 라 JS 없이 동작하고 키보드·스크린리더도 그대로 지원된다. #}
+<div class="rank">
   {% for r in rows %}
-  <tr>
-    <td>{{ loop.index }}</td>
-    <td style="font-weight:{{ '700' if r.uid==uid else '400' }};color:{{ '#0E2A47' if r.uid==uid else '#44566A' }}">{{ r.uid }}{% if r.uid==uid %} (나){% endif %}</td>
-    <td>{{ r.n }}</td>
-  </tr>
+  <details class="rrow{% if r.uid == uid %} me{% endif %}">
+    <summary>
+      <span class="rk{% if loop.index <= 3 and r.n > 0 %} top{% endif %}">{{ loop.index }}</span>
+      <span class="who">
+        <b>{{ r.name }}</b>
+        <span class="sub">{% if r.classno %}{{ r.classno }}반{% else %}반 미입력{% endif %} · {{ r.uid }}{% if r.uid == uid %} · 나{% endif %}</span>
+      </span>
+      <span class="bar" aria-hidden="true"><i style="width:{{ r.pct }}%"></i></span>
+      <span class="cnt"><b>{{ r.n }}</b>/{{ total }}</span>
+      <span class="chev" aria-hidden="true">▾</span>
+    </summary>
+    <div class="rdet">
+      {% for c in r.cats %}
+      <div class="crow">
+        <div class="clab">{{ c.label }} <span>{{ c.got }}/{{ c.tot }}</span></div>
+        <div class="chips">
+          {% for i in c.chals %}
+          <span class="chip{% if i.on %} on{% endif %}" title="{{ i.title }}{% if not i.on %} (미해결){% endif %}">{{ i.id }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      {% if r.n == 0 %}<p class="rdet-empty">아직 해결한 문제가 없습니다.</p>{% endif %}
+    </div>
+  </details>
   {% endfor %}
-  {% if not rows %}<tr><td colspan="3" style="color:var(--mute)">아직 해결한 참가자가 없습니다.</td></tr>{% endif %}
-</table>
+  {% if not rows %}<p class="empty">아직 참가자가 없습니다. 회원가입 후 문제를 풀어보세요.</p>{% endif %}
+</div>
 {% endblock %}
