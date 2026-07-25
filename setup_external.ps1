@@ -28,6 +28,16 @@ function Write-HostnetOverride($dir, [string[]]$services) {
   foreach ($s in $services) { $sb += "  ${s}:`n    build:`n      network: host`n" }
   Save-Lf "$dir\docker-compose.hostnet.yml" $sb
 }
+# [보정] compose 에 'restart: unless-stopped' 주입(멱등). 업스트림 compose 4종엔 restart 정책이 없어
+# 호스트/도커 데몬 재시작(재부팅) 시 컨테이너가 죽은 채 남았다 — 메인 스택은 전부 unless-stopped 라
+# 자동 복구되는데 외부 챌린지만 수동 기동이 필요했던 원인.
+function Add-Restart($path, [string[]]$services) {
+  if (-not (Test-Path $path)) { return }
+  $c = [System.IO.File]::ReadAllText($path)
+  $c = [regex]::Replace($c, '(?m)^[ \t]+restart:[ \t].*\r?\n', '')            # 기존 정책 제거(멱등·on-failure 포함)
+  foreach ($s in $services) { $c = [regex]::Replace($c, "(?m)^  ${s}:[ \t]*$", "  ${s}:`n    restart: unless-stopped") }
+  Save-Lf $path $c
+}
 
 # ── (1) secret-tunnel ──
 $st = "$ROOT\challenges\capstone\secret-tunnel"
@@ -49,6 +59,7 @@ $exd = [System.IO.File]::ReadAllText("$st\docker\extserver\Dockerfile") -replace
 Save-Lf "$st\docker\extserver\Dockerfile" $exd
 # alpine(musl) 3개 이미지 — host 네트워크 빌드 override(DNS 보정)
 Write-HostnetOverride $st @('extserver','intserver','flagserver')
+Add-Restart "$st\docker-compose.yml" @('extserver','intserver','flagserver')   # 재부팅 후 자동 복구
 
 # ── (2) authbypass basic/advanced ──
 $tmp = Join-Path $env:TEMP ("ab_" + [guid]::NewGuid().ToString('N'))
@@ -66,6 +77,8 @@ Reinject "$abA\docker-compose.yml" (Get-Flag FLAG_AUTHBYPASS_ADV)
 # advanced 호스트포트 9002→9005 (멱등)
 $ca = [System.IO.File]::ReadAllText("$abA\docker-compose.yml").Replace('"9002:9002"', '"9005:9002"')
 Save-Lf "$abA\docker-compose.yml" $ca
+Add-Restart "$abB\docker-compose.yml" @('arang_bank','db')      # 재부팅 후 자동 복구
+Add-Restart "$abA\docker-compose.yml" @('arang_bank2','db2')
 
 # ── (3) FSI 채팅(2022_fsi_edu_challs) — 캡스톤 XSS/SQLi (:9090, 자체 compose · 10.111.0.0/24 로 재매핑) ──
 $fsi = "$ROOT\challenges\capstone\fsi-chat"
@@ -85,11 +98,25 @@ if ($fsiXss -and (Test-Path "$fsi\mysql\init.sql")) {
 $fsiComp = "$fsi\docker-compose.yml"
 if (Test-Path $fsiComp) {
   $c = [System.IO.File]::ReadAllText($fsiComp).Replace('container_name: mysql-db', 'container_name: fsi-mysql-db')   # 앱은 고정 IP(10.111.0.5) 접속이라 무영향
-  if ($c -notmatch 'restart: on-failure') {
-    $c = $c.Replace("  external_server:", "  external_server:`n    restart: on-failure")
-    $c = $c.Replace("  internal_server:", "  internal_server:`n    restart: on-failure")
-  }
   Save-Lf $fsiComp $c
+  # ext/int db-레이스 자동복구 + 재부팅 후 자동 복구. (이전엔 ext/int 만 on-failure 라 데몬 재시작 시
+  #  ext/int 는 살아났는데 db 는 죽은 채 남아 '채팅은 열리는데 로그인/글이 안 되는' 상태가 됐다 → db 포함 3종 모두)
+  Add-Restart $fsiComp @('external_server','internal_server','db')
+}
+# [보정] flag 광역노출 차단(멱등): ext getBoardList 가 `author=<나> or author="admin"` 이라 admin 명의 글의
+#   '제목'이 전원 목록에 노출 → 한 명이 XSS 로 flag 를 유출하면 나머지가 그냥 읽어버렸다.
+#   공개는 공지(seed, seq=1)만 두고, 유출은 '봇이 내 아이디 명의로 써주는' 개인 채널로 유도.
+$fsiExtApp = "$fsi\ext\app.py"
+if (Test-Path $fsiExtApp) {
+  $c = [System.IO.File]::ReadAllText($fsiExtApp).Replace("or author=""admin""'", "or (author=""admin"" and seq=""1"")'")
+  Save-Lf $fsiExtApp $c
+}
+# 위 접근제어를 UI 에도 명시(멱등) — author=admin 으로 exfil 하면 아무에게도 안 보여 '조용히 실패'하므로
+# 목록 규칙을 보여줘 '내 명의로 쓰게 한다'는 설계에 도달하게 한다(체인 자체는 노출 안 함).
+$fsiBoardHtml = "$fsi\ext\templates\board.html"
+if ((Test-Path $fsiBoardHtml) -and -not (Select-String -Path $fsiBoardHtml -Pattern '내가 작성자' -Quiet -ErrorAction SilentlyContinue)) {
+  $note = '<h2 class="heading-section">FSI BOARD</h2>' + "`n" + "`t`t`t`t`t" + '<p style="color:#888;font-size:14px;">※ 목록에는 <b>내가 작성자(author)로 지정된 글</b>과 공지만 표시됩니다.</p>'
+  Save-Lf $fsiBoardHtml ([System.IO.File]::ReadAllText($fsiBoardHtml).Replace('<h2 class="heading-section">FSI BOARD</h2>', $note))
 }
 # [보정] 내부보드 int/app.py 재시작 루프(db 기동 레이스로 죽어도 부활 — XSS 챌린지용, 멱등)
 $fsiEntry = "$fsi\int\entrypoint.sh"

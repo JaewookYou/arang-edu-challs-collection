@@ -19,6 +19,16 @@ write_hostnet_override(){   # $1=대상 디렉터리, $2.. = 서비스명들
     for s in "$@"; do printf '  %s:\n    build:\n      network: host\n' "$s"; done
   } > "$f"
 }
+# [보정] compose 에 'restart: unless-stopped' 주입(멱등). 업스트림 compose 4종엔 restart 정책이 없어
+# 호스트/도커 데몬 재시작(재부팅) 시 컨테이너가 죽은 채 남았다(exit 255) — 메인 스택은 전부
+# unless-stopped 라 자동 복구되는데 외부 챌린지만 수동 기동이 필요했던 원인.
+add_restart(){   # $1=compose 파일, $2.. = 서비스명들
+  local f="$1"; shift
+  [ -f "$f" ] || return 0
+  sed -i.bak '/^[[:space:]]\+restart:[[:space:]]/d' "$f"                              # 기존 정책 제거(멱등·on-failure 포함)
+  for s in "$@"; do sed -i.bak "s|^  $s:[[:space:]]*$|  $s:\n    restart: unless-stopped|" "$f"; done
+  rm -f "$f.bak"
+}
 
 ST="$ROOT/challenges/capstone/secret-tunnel"
 AB_B="$ROOT/challenges/auth/authbypass-basic"
@@ -43,6 +53,7 @@ fi
 sed -i.bak 's|^echo "flag{dummy_flag_1}"|RUN echo "flag{dummy_flag_1}"|' "$ST/docker/extserver/Dockerfile" && rm -f "$ST/docker/extserver/Dockerfile.bak"
 # alpine(musl) 3개 이미지 — host 네트워크 빌드 override(DNS 보정)
 write_hostnet_override "$ST" extserver intserver flagserver
+add_restart "$ST/docker-compose.yml" extserver intserver flagserver   # 재부팅 후 자동 복구
 
 # ── (2) authbypass basic/advanced ──
 if [ ! -d "$AB_B" ] || [ ! -d "$AB_A" ]; then
@@ -57,6 +68,8 @@ reinject "$AB_B/docker-compose.yml" "$(getf FLAG_AUTHBYPASS_BASIC)"
 reinject "$AB_A/docker-compose.yml" "$(getf FLAG_AUTHBYPASS_ADV)"
 # advanced 호스트포트 9002→9005 (멱등: 이미 9005면 매치 안 됨)
 sed -i.bak 's|"9002:9002"|"9005:9002"|' "$AB_A/docker-compose.yml" && rm -f "$AB_A/docker-compose.yml.bak"
+add_restart "$AB_B/docker-compose.yml" arang_bank db     # 재부팅 후 자동 복구
+add_restart "$AB_A/docker-compose.yml" arang_bank2 db2
 
 # ── (3) FSI 채팅(2022_fsi_edu_challs) — 캡스톤 XSS/SQLi (:9090, 자체 compose · 10.111.0.0/24 로 재매핑) ──
 FSI="$ROOT/challenges/capstone/fsi-chat"
@@ -74,9 +87,23 @@ FSI_SQLI="$(getf FLAG_FSI_SQLI || true)"; FSI_XSS="$(getf FLAG_FSI_XSS || true)"
 FSI_COMPOSE="$FSI/docker-compose.yml"
 if [ -f "$FSI_COMPOSE" ]; then
   sed -i.bak 's|container_name: mysql-db|container_name: fsi-mysql-db|' "$FSI_COMPOSE" && rm -f "$FSI_COMPOSE.bak"   # 앱은 고정 IP(10.111.0.5) 접속이라 무영향
-  if ! grep -q 'restart: on-failure' "$FSI_COMPOSE"; then
-    sed -i.bak -e 's|^  external_server:|  external_server:\n    restart: on-failure|' -e 's|^  internal_server:|  internal_server:\n    restart: on-failure|' "$FSI_COMPOSE" && rm -f "$FSI_COMPOSE.bak"
-  fi
+  # ext/int db-레이스 자동복구 + 재부팅 후 자동 복구. (이전엔 ext/int 만 on-failure 라 데몬 재시작 시
+  #  ext/int 는 살아났는데 db 는 죽은 채 남아 '채팅은 열리는데 로그인/글이 안 되는' 상태가 됐다 → db 포함 3종 모두)
+  add_restart "$FSI_COMPOSE" external_server internal_server db
+fi
+# [보정] flag 광역노출 차단(멱등): ext getBoardList 가 `author=<나> or author="admin"` 이라
+#   admin 명의로 쓰인 글은 '제목'이 전원 목록에 뜬다. 의도된 풀이가 봇에게 admin 명의로 flag 를
+#   적게 하는 것이라, 한 명이 풀면 나머지 전원이 목록에서 flag 를 그냥 읽어버렸다.
+#   → 공개는 공지(seed, seq=1)만. 유출은 '봇이 내 아이디 명의로 써주게' 하는 개인 채널로 유도
+#     (int/ext /write 모두 author 를 폼에서 받으므로 페이로드가 자기 uid 를 넣으면 본인만 열람).
+if [ -f "$FSI/ext/app.py" ]; then
+  sed -i.bak "s|or author=\"admin\"'|or (author=\"admin\" and seq=\"1\")'|" "$FSI/ext/app.py" && rm -f "$FSI/ext/app.py.bak"
+fi
+# 위 접근제어를 UI 에도 명시(멱등) — author=admin 으로 exfil 하면 아무에게도 안 보여 '조용히 실패'하므로,
+# 목록 규칙을 보여줘 학습자가 '내 명의로 쓰게 한다'는 설계에 도달하게 한다(체인 자체는 노출 안 함).
+BH="$FSI/ext/templates/board.html"
+if [ -f "$BH" ] && ! grep -q '내가 작성자' "$BH"; then
+  sed -i.bak 's|<h2 class="heading-section">FSI BOARD</h2>|<h2 class="heading-section">FSI BOARD</h2>\n\t\t\t\t\t<p style="color:#888;font-size:14px;">※ 목록에는 <b>내가 작성자(author)로 지정된 글</b>과 공지만 표시됩니다.</p>|' "$BH" && rm -f "$BH.bak"
 fi
 # [보정] 내부보드 int/app.py 는 db 기동 레이스로 죽으면 재기동 안 됨(entrypoint 가 '&' 백그라운드) → XSS 챌린지용 재시작 루프(멱등)
 if [ -f "$FSI/int/entrypoint.sh" ] && ! grep -q 'while true; do python3 /app/app.py' "$FSI/int/entrypoint.sh"; then
