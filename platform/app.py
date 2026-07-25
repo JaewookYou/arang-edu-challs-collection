@@ -202,6 +202,9 @@ def ranking():
     rows = []
     for u, d in users.items():
         solved = [s for s in d.get("solved", []) if s]
+        # hidden: 강사·테스트 계정 — 풀이 여부와 무관하게 랭킹에서 제외(본인 진행도는 정상 동작)
+        if d.get("hidden"):
+            continue
         # 참가자만 노출: 프로필을 채웠거나(수강생) 해결 기록이 있는 계정.
         # (부하테스트·검증용으로 만들어진 잔여 계정이 랭킹을 덮지 않게)
         if not solved and not profile_done(d):
