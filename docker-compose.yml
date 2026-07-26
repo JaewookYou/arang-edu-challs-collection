@@ -15,6 +15,10 @@ services:
     container_name: bot
     environment:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    # Docker Desktop(mac/win)과 달리 Linux 엔진엔 host.docker.internal 이 없다.
+    # 풀이·문서가 이 이름으로 호스트 리스너(exfil_server.py)를 가리키므로 매핑해 준다.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   db:

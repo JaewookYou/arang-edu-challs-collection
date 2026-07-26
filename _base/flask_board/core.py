@@ -18,9 +18,19 @@ def create_app(*, title, chal_id, flag, admin_password,
     bot_url = bot_url or os.environ.get("BOT_URL", "http://bot:9099/visit")
 
     users = {"admin": admin_password}
+    # 봇(admin)이 대신 쓴 글을 '신고한 학생'에게 귀속시키기 위한 최근 신고자.
+    # 이 배포는 봇 egress 로 외부 리스너를 쓰기 어려워(원격 수강생) 실질 유출 경로가
+    # '봇에게 게시글을 쓰게 하기' 다. 그런데 admin 명의 글이 전원에게 보이면 한 명이
+    # flag 를 제목에 적는 순간 전 수강생에게 뿌려진다 → 신고자 본인에게만 보이게 한다.
+    last_reporter = {"uid": None}
     articles = list(seed_articles or [])
     if flag_in_article:
         articles.insert(0, {"seq": 0, "subject": "flag", "author": "admin", "content": flag})
+    # 기동 시점의 시드 글만 '전원 공개'(문제 유도용 admin 글 — 제목만 보이고 본문은 못 봄).
+    # 런타임에 admin 명의로 쌓이는 글(= XSS 페이로드가 봇에게 대신 쓰게 한 글)까지 전원에게
+    # 보이면, 한 명이 flag 를 제목에 적는 순간 전 수강생 목록에 flag 가 그대로 뿌려진다.
+    for a in articles:
+        a["pinned"] = True
 
     def is_login():
         return session.get("isLogin", False)
@@ -68,7 +78,8 @@ def create_app(*, title, chal_id, flag, admin_password,
         if not is_login():
             return redirect(url_for("login"))
         me = session["userid"]
-        rows = [a for a in articles if a["author"] == me or me == "admin" or a["author"] == "admin"]
+        rows = [a for a in articles
+                if a["author"] == me or me == "admin" or a.get("pinned") or a.get("for_user") == me]
         return render_template("board.html", **ctx(articles=rows))
 
     @app.route("/board/<int:seq>")
@@ -78,7 +89,7 @@ def create_app(*, title, chal_id, flag, admin_password,
         if seq < 0 or seq >= len(articles):
             return "no such article", 404
         a = articles[seq]
-        if a["author"] == session["userid"] or session["userid"] == "admin":
+        if a["author"] == session["userid"] or session["userid"] == "admin" or a.get("for_user") == session["userid"]:
             extra = {}
             if flag_in_view_href:
                 extra["flag_href"] = flag if session["userid"] == "admin" else "no flag to user"
@@ -97,8 +108,12 @@ def create_app(*, title, chal_id, flag, admin_password,
             return "<script>alert('blocked');history.go(-1)</script>"
         if content_transform:
             content = content_transform(content)
-        articles.append({"seq": len(articles), "subject": subject,
-                         "author": session["userid"], "content": content})
+        item = {"seq": len(articles), "subject": subject,
+                "author": session["userid"], "content": content}
+        # 봇(admin)이 XSS 페이로드로 대신 쓴 글 → 마지막 신고자에게만 보이게 귀속
+        if session["userid"] == "admin" and last_reporter["uid"]:
+            item["for_user"] = last_reporter["uid"]
+        articles.append(item)
         return redirect(url_for("board"))
 
     if needs_bot:
@@ -107,6 +122,7 @@ def create_app(*, title, chal_id, flag, admin_password,
             if request.method == "GET":
                 return render_template("report.html", **ctx())
             url = request.form.get("url", "")
+            last_reporter["uid"] = session.get("userid")   # 봇이 쓴 글의 귀속 대상
             try:
                 requests.post(bot_url, data={"chal": chal_id, "url": url}, timeout=5)
             except Exception:
