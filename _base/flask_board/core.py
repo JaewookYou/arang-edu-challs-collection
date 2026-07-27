@@ -18,6 +18,10 @@ def create_app(*, title, chal_id, flag, admin_password,
     bot_url = bot_url or os.environ.get("BOT_URL", "http://bot:9099/visit")
 
     users = {"admin": admin_password}
+    # admin 비번은 '지금까지 설정된 모든 값'을 유효하게 둔다. csrf-1/2 는 CSRF 로 admin
+    # 비번을 바꾼 뒤 그 비번으로 로그인하는 문제인데, 값이 전역 하나뿐이면 여러 학생이
+    # 동시에 풀 때 서로 덮어써서 대부분 로그인에 실패한다(3명 동시 → 1명만 성공).
+    admin_pws = {admin_password}
     # 봇(admin)이 대신 쓴 글을 '신고한 학생'에게 귀속시키기 위한 최근 신고자.
     # 이 배포는 봇 egress 로 외부 리스너를 쓰기 어려워(원격 수강생) 실질 유출 경로가
     # '봇에게 게시글을 쓰게 하기' 다. 그런데 admin 명의 글이 전원에게 보이면 한 명이
@@ -48,10 +52,9 @@ def create_app(*, title, chal_id, flag, admin_password,
             return render_template("login.html", **ctx(msg=""))
         uid = request.form.get("userid", "")
         pw = request.form.get("userpw", "")
-        # admin 은 '원래 비밀번호'로도 항상 로그인된다. csrf-1/2 의 정답 경로가 admin 비번을
-        # 바꾸는데 그 값이 전역 공유라, 한 명이 풀면 봇(ADMIN_PASSWORD 로 로그인)이 막혀
-        # 나머지 수강생 전원에게 문제가 죽어버린다. 학생이 바꾼 비번도 그대로 통한다.
-        if uid in users and (users[uid] == pw or (uid == "admin" and pw == admin_password)):
+        # admin 은 '원래 비밀번호'로도 항상 로그인된다(안 그러면 한 명이 풀자마자 봇이
+        # 로그인 못 해 나머지 전원에게 문제가 죽는다). 학생이 바꾼 비번들도 모두 통한다.
+        if uid in users and (users[uid] == pw or (uid == "admin" and pw in admin_pws)):
             session["userid"] = uid
             session["isLogin"] = True
             resp = make_response(redirect(url_for("board")))
@@ -134,6 +137,6 @@ def create_app(*, title, chal_id, flag, admin_password,
 
     if extra_setup:
         extra_setup(app, {"users": users, "articles": articles, "flag": flag,
-                          "is_login": is_login, "ctx": ctx})
+                          "is_login": is_login, "ctx": ctx, "admin_pws": admin_pws})
 
     return app

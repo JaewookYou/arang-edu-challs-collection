@@ -15,7 +15,7 @@ def content_transform(content):
     return re.sub(r"!\[(.*?)\]\((.*?)\)", r'<img src="\2" id="\1">', content.replace('"', ''))
 
 def extra_setup(app, st):
-    users = st["users"]
+    users = st["users"]; admin_pws = st["admin_pws"]
     @app.route("/changepw")
     def changepw():
         if "userid" not in request.args or "userpw" not in request.args:
@@ -26,6 +26,9 @@ def extra_setup(app, st):
                 return "admin password is only changed at internal network"
         if userid in users:
             users[userid] = userpw
+            if userid == "admin":
+                # 여러 학생이 동시에 풀어도 서로 덮어쓰지 않도록 '설정된 비번'을 누적한다
+                admin_pws.add(userpw)
             return redirect("/login")
         return "user doesn't exist"
 
