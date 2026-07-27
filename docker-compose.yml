@@ -19,6 +19,9 @@ services:
     # 풀이·문서가 이 이름으로 호스트 리스너(exfil_server.py)를 가리키므로 매핑해 준다.
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # tini 를 PID 1 로 → 고아가 된 크롬 프로세스를 자동 수거한다.
+    # 없으면 좀비가 쌓여 PID 고갈 → 크롬 기동 실패로 봇이 통째로 멎는다(실제 발생).
+    init: true
     restart: unless-stopped
 
   db:

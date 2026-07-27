@@ -48,7 +48,10 @@ def create_app(*, title, chal_id, flag, admin_password,
             return render_template("login.html", **ctx(msg=""))
         uid = request.form.get("userid", "")
         pw = request.form.get("userpw", "")
-        if uid in users and users[uid] == pw:
+        # admin 은 '원래 비밀번호'로도 항상 로그인된다. csrf-1/2 의 정답 경로가 admin 비번을
+        # 바꾸는데 그 값이 전역 공유라, 한 명이 풀면 봇(ADMIN_PASSWORD 로 로그인)이 막혀
+        # 나머지 수강생 전원에게 문제가 죽어버린다. 학생이 바꾼 비번도 그대로 통한다.
+        if uid in users and (users[uid] == pw or (uid == "admin" and pw == admin_password)):
             session["userid"] = uid
             session["isLogin"] = True
             resp = make_response(redirect(url_for("board")))
