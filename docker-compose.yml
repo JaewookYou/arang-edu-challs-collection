@@ -1,10 +1,34 @@
 # 자동 생성(gen) — 플랫폼/봇/DB + 문제. 프로필: all/day1/day2/<category>
 name: web-pentest-edu
 
+# ── 자원 상한 ──────────────────────────────────────────────────────────────
+# 문제 여러 개가 '설계상 RCE'(pickle/커맨드 인젝션/웹셸)라, 수강생 페이로드가 컨테이너
+# 프로세스 안에서 그대로 돈다. 상한이 없으면 그중 하나가 호스트 메모리를 다 먹고
+# 커널이 전역 OOM 을 내며 서버 전체가 멎는다(실제 발생: 7/27~7/29 6회, 마지막엔
+# 호스트가 2시간 반 정지). 상한을 걸면 사고가 그 컨테이너 하나로 격리되고,
+# restart 정책이 바로 되살린다. pids 상한은 fork 폭탄용.
+x-lim: &lim
+  mem_limit: 512m
+  memswap_limit: 512m
+  pids_limit: 256
+x-lim-db: &lim-db
+  mem_limit: 768m
+  memswap_limit: 768m
+  pids_limit: 512
+x-lim-jsp: &lim-jsp
+  mem_limit: 640m
+  memswap_limit: 640m
+  pids_limit: 512
+x-lim-bot: &lim-bot
+  mem_limit: 1536m
+  memswap_limit: 1536m
+  pids_limit: 1024
+
 services:
   platform:
     build: { context: ., dockerfile: platform/Dockerfile }
     container_name: platform
+    <<: *lim
     ports: ["9000:9000"]
     env_file: [.env]
     volumes: ["platform_data:/data"]
@@ -13,6 +37,7 @@ services:
   bot:
     build: { context: ., dockerfile: bot/Dockerfile }
     container_name: bot
+    <<: *lim-bot
     environment:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     # Docker Desktop(mac/win)과 달리 Linux 엔진엔 host.docker.internal 이 없다.
@@ -27,6 +52,7 @@ services:
   db:
     image: mariadb:10.11
     container_name: db
+    <<: *lim-db
     environment:
       - MYSQL_ROOT_PASSWORD=rootpw
       - FLAG_SQLI_3=${FLAG_SQLI_3}
@@ -44,6 +70,7 @@ services:
   2fa-bypass:
     build: { context: ., dockerfile: challenges/auth/2fa-bypass/Dockerfile }
     container_name: 2fa-bypass
+    <<: *lim
     ports: ["9302:9302"]
     environment:
       - FLAG_2FA=${FLAG_2FA}
@@ -53,6 +80,7 @@ services:
   idor-balance:
     build: { context: ., dockerfile: challenges/auth/idor-balance/Dockerfile }
     container_name: idor-balance
+    <<: *lim
     ports: ["9301:9301"]
     environment:
       - FLAG_IDOR=${FLAG_IDOR}
@@ -62,6 +90,7 @@ services:
   jsp-chain:
     build: { context: ., dockerfile: challenges/capstone/jsp-chain/Dockerfile }
     container_name: jsp-chain
+    <<: *lim-jsp
     ports: ["9711:9711"]
     environment:
       - FLAG_JSP_CHAIN=${FLAG_JSP_CHAIN}
@@ -71,6 +100,7 @@ services:
   csrf-1:
     build: { context: ., dockerfile: challenges/client/csrf-1/Dockerfile }
     container_name: csrf-1
+    <<: *lim
     ports: ["9104:9104"]
     environment:
       - FLAG_CSRF_1=${FLAG_CSRF_1}
@@ -83,6 +113,7 @@ services:
   csrf-2:
     build: { context: ., dockerfile: challenges/client/csrf-2/Dockerfile }
     container_name: csrf-2
+    <<: *lim
     ports: ["9105:9105"]
     environment:
       - FLAG_CSRF_2=${FLAG_CSRF_2}
@@ -95,6 +126,7 @@ services:
   domclobbering:
     build: { context: ., dockerfile: challenges/client/domclobbering/Dockerfile }
     container_name: domclobbering
+    <<: *lim
     ports: ["9107:9107"]
     environment:
       - FLAG_DOMCLOB=${FLAG_DOMCLOB}
@@ -107,6 +139,7 @@ services:
   open-redirect:
     build: { context: ., dockerfile: challenges/client/open-redirect/Dockerfile }
     container_name: open-redirect
+    <<: *lim
     ports: ["9108:9108"]
     environment:
       - FLAG_OPENRED=${FLAG_OPENRED}
@@ -116,6 +149,7 @@ services:
   xsleak:
     build: { context: ., dockerfile: challenges/client/xsleak/Dockerfile }
     container_name: xsleak
+    <<: *lim
     ports: ["9106:9106"]
     environment:
       - FLAG_XSLEAK=${FLAG_XSLEAK}
@@ -128,6 +162,7 @@ services:
   xss-1:
     build: { context: ., dockerfile: challenges/client/xss-1/Dockerfile }
     container_name: xss-1
+    <<: *lim
     ports: ["9101:9101"]
     environment:
       - FLAG_XSS_1=${FLAG_XSS_1}
@@ -140,6 +175,7 @@ services:
   xss-2:
     build: { context: ., dockerfile: challenges/client/xss-2/Dockerfile }
     container_name: xss-2
+    <<: *lim
     ports: ["9102:9102"]
     environment:
       - FLAG_XSS_2=${FLAG_XSS_2}
@@ -152,6 +188,7 @@ services:
   xss-3:
     build: { context: ., dockerfile: challenges/client/xss-3/Dockerfile }
     container_name: xss-3
+    <<: *lim
     ports: ["9103:9103"]
     environment:
       - FLAG_XSS_3=${FLAG_XSS_3}
@@ -164,6 +201,7 @@ services:
   cmdi-1:
     build: { context: ., dockerfile: challenges/injection/cmdi-1/Dockerfile }
     container_name: cmdi-1
+    <<: *lim
     ports: ["9206:9206"]
     environment:
       - FLAG_CMDI_1=${FLAG_CMDI_1}
@@ -171,12 +209,16 @@ services:
     # Linux 엔진엔 이 이름이 없어 풀이가 조용히 실패한다 → 호스트 게이트웨이로 매핑.
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # 기동 시 복원용 원본. 읽기전용으로 물려서 컨테이너 안 root(=인젝션 셸)도 못 건드린다.
+    volumes:
+      - ./challenges/injection/cmdi-1/app.py:/opt/app.py.orig:ro
     profiles: ["all", "day1", "injection"]
     restart: unless-stopped
 
   lfi-1:
     build: { context: ., dockerfile: challenges/injection/lfi-1/Dockerfile }
     container_name: lfi-1
+    <<: *lim
     ports: ["9204:9204"]
     environment:
       - FLAG_LFI_1=${FLAG_LFI_1}
@@ -186,6 +228,7 @@ services:
   lfi-2:
     build: { context: ., dockerfile: challenges/injection/lfi-2/Dockerfile }
     container_name: lfi-2
+    <<: *lim
     ports: ["9205:9205"]
     environment:
       - FLAG_LFI_2=${FLAG_LFI_2}
@@ -195,6 +238,7 @@ services:
   sqli-1:
     build: { context: ., dockerfile: challenges/injection/sqli-1/Dockerfile }
     container_name: sqli-1
+    <<: *lim
     ports: ["9201:9201"]
     environment:
       - FLAG_SQLI_1=${FLAG_SQLI_1}
@@ -211,6 +255,7 @@ services:
   sqli-2:
     build: { context: ., dockerfile: challenges/injection/sqli-2/Dockerfile }
     container_name: sqli-2
+    <<: *lim
     ports: ["9202:9202"]
     environment:
       - FLAG_SQLI_2=${FLAG_SQLI_2}
@@ -227,6 +272,7 @@ services:
   sqli-3:
     build: { context: ., dockerfile: challenges/injection/sqli-3/Dockerfile }
     container_name: sqli-3
+    <<: *lim
     ports: ["9203:9203"]
     environment:
       - FLAG_SQLI_3=${FLAG_SQLI_3}
@@ -243,6 +289,7 @@ services:
   ssti-1:
     build: { context: ., dockerfile: challenges/injection/ssti-1/Dockerfile }
     container_name: ssti-1
+    <<: *lim
     ports: ["9207:9207"]
     environment:
       - FLAG_SSTI_1=${FLAG_SSTI_1}
@@ -252,6 +299,7 @@ services:
   xxe-1:
     build: { context: ., dockerfile: challenges/injection/xxe-1/Dockerfile }
     container_name: xxe-1
+    <<: *lim
     ports: ["9208:9208"]
     environment:
       - FLAG_XXE_1=${FLAG_XXE_1}
@@ -261,6 +309,7 @@ services:
   jsp-pathtraversal:
     build: { context: ., dockerfile: challenges/jsp/jsp-pathtraversal/Dockerfile }
     container_name: jsp-pathtraversal
+    <<: *lim-jsp
     ports: ["9603:9603"]
     environment:
       - FLAG_JSP_PATH=${FLAG_JSP_PATH}
@@ -270,6 +319,7 @@ services:
   jsp-sqli:
     build: { context: ., dockerfile: challenges/jsp/jsp-sqli/Dockerfile }
     container_name: jsp-sqli
+    <<: *lim-jsp
     ports: ["9601:9601"]
     environment:
       - FLAG_JSP_SQLI=${FLAG_JSP_SQLI}
@@ -286,6 +336,7 @@ services:
   jsp-upload:
     build: { context: ., dockerfile: challenges/jsp/jsp-upload/Dockerfile }
     container_name: jsp-upload
+    <<: *lim-jsp
     ports: ["9602:9602"]
     environment:
       - FLAG_JSP_UPLOAD=${FLAG_JSP_UPLOAD}
@@ -295,6 +346,7 @@ services:
   race-transfer:
     build: { context: ., dockerfile: challenges/logic/race-transfer/Dockerfile }
     container_name: race-transfer
+    <<: *lim
     ports: ["9401:9401"]
     environment:
       - FLAG_RACE=${FLAG_RACE}
@@ -304,6 +356,7 @@ services:
   prototype-pollution:
     build: { context: ., dockerfile: challenges/server/prototype-pollution/Dockerfile }
     container_name: prototype-pollution
+    <<: *lim
     ports: ["9503:9503"]
     environment:
       - FLAG_PROTO=${FLAG_PROTO}
@@ -316,6 +369,7 @@ services:
   ssrf-internal:
     build: { context: ., dockerfile: challenges/server/ssrf-internal/Dockerfile }
     container_name: ssrf-internal
+    <<: *lim
     ports: ["9502:9502"]
     environment:
       - FLAG_SSRF=${FLAG_SSRF}
@@ -325,6 +379,7 @@ services:
   upload-webshell:
     build: { context: ., dockerfile: challenges/server/upload-webshell/Dockerfile }
     container_name: upload-webshell
+    <<: *lim
     ports: ["9501:9501"]
     environment:
       - FLAG_UPLOAD=${FLAG_UPLOAD}

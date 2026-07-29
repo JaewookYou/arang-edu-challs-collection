@@ -31,15 +31,90 @@ def flag_map():
 
 # ── 사용자 저장 (간단 JSON) ──
 USERS_PATH = os.environ.get("USERS_PATH", "/data/users.json")
+
+def _salvage(raw):
+    """잘린 JSON 에서 '마지막으로 완결된 계정' 까지만 살려 낸다.
+    json.dump(indent=2) 형식이라 계정 하나의 끝은 항상 '\\n  },\\n' 이다."""
+    idx = raw.rfind("\n  },\n")
+    if idx < 0:
+        return None
+    try:
+        d = json.loads(raw[:idx] + "\n  }\n}")
+        return d if isinstance(d, dict) else None
+    except Exception:
+        return None
+
 def load_users():
-    if os.path.exists(USERS_PATH):
-        with open(USERS_PATH, encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+    if not os.path.exists(USERS_PATH):
+        return {}
+    with open(USERS_PATH, encoding="utf-8", errors="replace") as f:
+        raw = f.read()
+    try:
+        return json.loads(raw)
+    except Exception:
+        pass
+    # 모든 요청이 이 함수를 거치므로 여기서 예외가 나면 플랫폼 전체가 500 이 된다.
+    # (실제 발생: 호스트가 저장 도중 크래시 → 파일이 잘림 → 로그인·랭킹 전부 마비)
+    # 조용히 죽지 말고 살릴 수 있는 만큼 살려서 수업을 계속 굴린다.
+    d = _salvage(raw)
+    if d is None:                       # 살릴 수 없으면 가장 최근 스냅샷으로
+        for b in sorted(_snapshots(), reverse=True):
+            try:
+                with open(b, encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                continue
+        return {}
+    try:                                # 살린 결과를 되써서 다음 요청부터는 정상 경로로
+        os.replace(USERS_PATH, USERS_PATH + ".corrupt")
+        _atomic_write(USERS_PATH, d)
+    except Exception:
+        pass
+    return d
+
+def _snapshots():
+    d = os.path.dirname(USERS_PATH)
+    base = os.path.basename(USERS_PATH) + ".bak-"
+    try:
+        return [os.path.join(d, n) for n in os.listdir(d) if n.startswith(base)]
+    except Exception:
+        return []
+
+def _atomic_write(path, obj):
+    """임시파일 → fsync → rename. 중간에 전원이 나가도 파일이 '잘린 상태' 로 남지 않는다."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, indent=2, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)               # rename 은 원자적 — 옛 내용 아니면 새 내용
+    try:                                # rename 자체도 디렉터리까지 내려야 확정된다
+        fd = os.open(os.path.dirname(path), os.O_DIRECTORY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except Exception:
+        pass
+
+def _snapshot(u):
+    """시간 단위 스냅샷(최근 12개 보관) — 최악의 경우 되돌릴 지점."""
+    tag = time.strftime("%Y%m%d-%H", time.localtime())
+    path = "%s.bak-%s" % (USERS_PATH, tag)
+    if os.path.exists(path):
+        return
+    try:
+        _atomic_write(path, u)
+        old = sorted(_snapshots())[:-12]
+        for p in old:
+            os.remove(p)
+    except Exception:
+        pass
+
 def save_users(u):
-    os.makedirs(os.path.dirname(USERS_PATH), exist_ok=True)
-    with open(USERS_PATH, "w", encoding="utf-8") as f:
-        json.dump(u, f, indent=2, ensure_ascii=False)
+    _atomic_write(USERS_PATH, u)
+    _snapshot(u)
 
 def current_user():
     return session.get("uid")

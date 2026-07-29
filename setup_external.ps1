@@ -39,6 +39,25 @@ function Add-Restart($path, [string[]]$services) {
   Save-Lf $path $c
 }
 
+# [보정] compose 에 메모리·PID 상한 주입(멱등). 업스트림 compose 엔 상한이 없다.
+# secret-tunnel 은 설계상 pickle 역직렬화 RCE 라 수강생 페이로드가 Flask 프로세스 안에서
+# 그대로 돈다. 상한이 없으면 그 프로세스가 호스트 메모리를 다 먹고 커널이 전역 OOM 을
+# 내며 서버 전체가 멎는다(실제 발생). 상한을 걸면 사고가 그 컨테이너 하나로 격리된다.
+function Strip-Limits($path) {
+  if (-not (Test-Path $path)) { return }
+  $c = [System.IO.File]::ReadAllText($path)
+  $c = [regex]::Replace($c, '(?m)^[ \t]+(mem_limit|memswap_limit|pids_limit):[ \t].*\r?\n', '')
+  Save-Lf $path $c
+}
+function Add-Limits($path, [string]$mem, [int]$pids, [string[]]$services) {
+  if (-not (Test-Path $path)) { return }
+  $c = [System.IO.File]::ReadAllText($path)
+  foreach ($s in $services) {
+    $c = [regex]::Replace($c, "(?m)^  ${s}:[ \t]*$", "  ${s}:`n    mem_limit: ${mem}`n    memswap_limit: ${mem}`n    pids_limit: ${pids}")
+  }
+  Save-Lf $path $c
+}
+
 # ── (1) secret-tunnel ──
 $st = "$ROOT\challenges\capstone\secret-tunnel"
 if (-not (Test-Path $st)) {
@@ -60,6 +79,8 @@ Save-Lf "$st\docker\extserver\Dockerfile" $exd
 # alpine(musl) 3개 이미지 — host 네트워크 빌드 override(DNS 보정)
 Write-HostnetOverride $st @('extserver','intserver','flagserver')
 Add-Restart "$st\docker-compose.yml" @('extserver','intserver','flagserver')   # 재부팅 후 자동 복구
+Strip-Limits "$st\docker-compose.yml"                                          # 폭주 격리(호스트 전체 OOM 방지)
+Add-Limits  "$st\docker-compose.yml" '512m' 256 @('extserver','intserver','flagserver')
 
 # ── (2) authbypass basic/advanced ──
 $tmp = Join-Path $env:TEMP ("ab_" + [guid]::NewGuid().ToString('N'))
@@ -79,6 +100,10 @@ $ca = [System.IO.File]::ReadAllText("$abA\docker-compose.yml").Replace('"9002:90
 Save-Lf "$abA\docker-compose.yml" $ca
 Add-Restart "$abB\docker-compose.yml" @('arang_bank','db')      # 재부팅 후 자동 복구
 Add-Restart "$abA\docker-compose.yml" @('arang_bank2','db2')
+Strip-Limits "$abB\docker-compose.yml"; Add-Limits "$abB\docker-compose.yml" '512m' 256 @('arang_bank')
+Add-Limits "$abB\docker-compose.yml" '768m' 512 @('db')
+Strip-Limits "$abA\docker-compose.yml"; Add-Limits "$abA\docker-compose.yml" '512m' 256 @('arang_bank2')
+Add-Limits "$abA\docker-compose.yml" '768m' 512 @('db2')
 
 # ── (3) FSI 채팅(2022_fsi_edu_challs) — 캡스톤 XSS/SQLi (:9090, 자체 compose · 10.111.0.0/24 로 재매핑) ──
 $fsi = "$ROOT\challenges\capstone\fsi-chat"
@@ -102,6 +127,9 @@ if (Test-Path $fsiComp) {
   # ext/int db-레이스 자동복구 + 재부팅 후 자동 복구. (이전엔 ext/int 만 on-failure 라 데몬 재시작 시
   #  ext/int 는 살아났는데 db 는 죽은 채 남아 '채팅은 열리는데 로그인/글이 안 되는' 상태가 됐다 → db 포함 3종 모두)
   Add-Restart $fsiComp @('external_server','internal_server','db')
+  Strip-Limits $fsiComp
+  Add-Limits $fsiComp '512m' 256 @('external_server','internal_server')
+  Add-Limits $fsiComp '768m' 512 @('db')
 }
 # [보정] flag 광역노출 차단(멱등): ext getBoardList 가 `author=<나> or author="admin"` 이라 admin 명의 글의
 #   '제목'이 전원 목록에 노출 → 한 명이 XSS 로 flag 를 유출하면 나머지가 그냥 읽어버렸다.
