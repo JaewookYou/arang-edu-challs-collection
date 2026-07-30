@@ -209,9 +209,13 @@ services:
     # Linux 엔진엔 이 이름이 없어 풀이가 조용히 실패한다 → 호스트 게이트웨이로 매핑.
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    # 기동 시 복원용 원본. 읽기전용으로 물려서 컨테이너 안 root(=인젝션 셸)도 못 건드린다.
+    # 기동 시 복원용 원본 + '/' 가 보여 주는 소스. 읽기전용으로 물려서 컨테이너 안
+    # root(=인젝션 셸)도 못 건드린다 → 남의 회수 내용이 공용 페이지에 뜨는 일이 없다.
     volumes:
       - ./challenges/injection/cmdi-1/app.py:/opt/app.py.orig:ro
+    # tini 를 PID 1 로 → 수강생 페이로드가 남긴 고아 프로세스를 자동 수거한다.
+    # 없으면 안 끝나는 명령의 잔재가 쌓여 pids 한도에 걸려 문제가 통째로 멎는다.
+    init: true
     profiles: ["all", "day1", "injection"]
     restart: unless-stopped
 
