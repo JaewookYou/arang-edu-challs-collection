@@ -3,7 +3,8 @@
 플랫폼 (스코어보드) — 문제를 호스팅하지 않고 registry.yaml 만 읽어
 목록 / 플래그 제출 / 채점 / 랭킹만 담당한다. (문제 컨테이너와 직접 통신하지 않음)
 """
-import os, json, time
+import os, json, time, fcntl
+from contextlib import contextmanager
 from urllib.parse import urlsplit, urlunsplit
 import yaml
 from flask import Flask, request, session, redirect, url_for, render_template
@@ -83,7 +84,9 @@ def _snapshots():
 def _atomic_write(path, obj):
     """임시파일 → fsync → rename. 중간에 전원이 나가도 파일이 '잘린 상태' 로 남지 않는다."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
+    # 임시파일 이름에 pid 를 넣는다. 예전엔 워커 전부가 같은 '.tmp' 를 써서, 동시에
+    # 저장이 겹치면 두 프로세스가 한 파일에 번갈아 쓴 뒤 rename → 깨진 JSON 이 됐다.
+    tmp = "%s.tmp.%d" % (path, os.getpid())
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=2, ensure_ascii=False)
         f.flush()
@@ -115,6 +118,42 @@ def _snapshot(u):
 def save_users(u):
     _atomic_write(USERS_PATH, u)
     _snapshot(u)
+
+
+# ── 계정 파일 갱신은 반드시 잠그고 한다 ────────────────────────────────
+# 워커가 여러 개인데 '읽기 → 수정 → 파일 전체 쓰기' 를 잠금 없이 하면,
+# 두 명이 동시에 제출할 때 나중에 저장한 쪽이 앞사람의 solved 를 통째로 덮어쓴다.
+# (제출한 본인 화면엔 '인정' 이 떠도 기록이 사라져 '인증이 안 된다' 로 보인다.)
+# 파일 락이라 프로세스가 몇 개든 안전하다.
+LOCK_PATH = USERS_PATH + ".lock"
+
+
+@contextmanager
+def _users_lock():
+    try:
+        os.makedirs(os.path.dirname(LOCK_PATH), exist_ok=True)
+        fd = os.open(LOCK_PATH, os.O_CREAT | os.O_RDWR, 0o644)
+    except Exception:
+        yield                            # 락을 못 잡아도 기능은 계속 (예전 동작)
+        return
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+
+
+def update_users(mutate):
+    """잠근 상태에서 load → mutate → save. mutate 의 반환값을 그대로 돌려준다.
+    수정 직전에 다시 읽으므로 다른 워커가 그 사이에 저장한 내용도 보존된다."""
+    with _users_lock():
+        users = load_users()
+        result = mutate(users)
+        save_users(users)
+        return result
 
 def current_user():
     return session.get("uid")
@@ -215,9 +254,16 @@ def register():
         return again(err)
     if uid in users:
         return again("이미 존재하는 아이디입니다.")
-    users[uid] = {"pw": generate_password_hash(pw), "solved": [], "last": 0,
+
+    def add(u):
+        if uid in u:                    # 잠금 안에서 한 번 더 — 동시 가입 방지
+            return False
+        u[uid] = {"pw": generate_password_hash(pw), "solved": [], "last": 0,
                   "classno": classno, "name": name}
-    save_users(users)
+        return True
+
+    if not update_users(add):
+        return again("이미 존재하는 아이디입니다.")
     return redirect(url_for("login", msg="가입 완료. 로그인하세요."))
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -239,8 +285,12 @@ def profile():
         return render_template("profile.html", msg=err, classes=CLASS_CHOICES,
                                form={"name": name, "classno": request.form.get("classno", "")},
                                uid=current_user(), first=not profile_done(me))
-    me["classno"], me["name"] = classno, name
-    save_users(users)
+    def setprof(u):
+        rec = u.get(current_user())
+        if rec is not None:
+            rec["classno"], rec["name"] = classno, name
+
+    update_users(setprof)
     return redirect(url_for("index"))
 
 @app.route("/logout")
@@ -254,16 +304,19 @@ def submit():
         return redirect(url_for("login"))
     flag = request.form.get("flag", "").strip()
     fm = flag_map()
-    users = load_users()
-    me = users.setdefault(current_user(), {"pw": "", "solved": [], "last": 0})
-    if flag in fm:
-        cid = fm[flag]
+    if flag not in fm:
+        return redirect(url_for("index", _anchor="no"))
+    cid = fm[flag]
+    uid = current_user()
+
+    def mark(users):
+        me = users.setdefault(uid, {"pw": "", "solved": [], "last": 0})
         if cid not in me["solved"]:
             me["solved"].append(cid)
             me["last"] = time.time()
-            save_users(users)
-        return redirect(url_for("index", _anchor="ok"))
-    return redirect(url_for("index", _anchor="no"))
+
+    update_users(mark)                  # 잠그고 갱신 — 동시 제출에도 기록이 안 날아간다
+    return redirect(url_for("index", _anchor="ok"))
 
 @app.route("/ranking")
 def ranking():

@@ -2,3 +2,4 @@ Flask==3.0.3
 PyYAML==6.0.2
 Werkzeug==3.0.3
 gunicorn==22.0.0
+gevent==24.2.1
